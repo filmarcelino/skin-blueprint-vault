@@ -1,4 +1,3 @@
-
 import { Skin } from "@/types";
 import { toast } from "sonner";
 import { 
@@ -26,13 +25,40 @@ export const addLocalSkin = async (
   }
 ): Promise<Skin | null> => {
   try {
+    console.log("Adding skin to inventory:", skinData);
+    
     // Find the skin in the ByMykel API to get complete data
     const apiSkin = await findSkinByName(skinData.name);
     
     if (!apiSkin) {
+      console.error(`Could not find skin data for "${skinData.name}"`);
       toast.error(`Could not find skin data for "${skinData.name}"`);
-      return null;
+      
+      // Create a skin with the data we have as fallback
+      const fallbackSkin: Skin = {
+        id: `local_${Date.now()}`,
+        name: skinData.name,
+        weapon: skinData.weapon || "Unknown",
+        category: skinData.category || "Unknown",
+        rarity: skinData.rarity || "Common",
+        float: skinData.float,
+        exterior: skinData.float ? calculateExteriorFromFloat(skinData.float) : undefined,
+        stattrak: skinData.stattrak,
+        souvenir: skinData.souvenir,
+        imageUrl: skinData.imageUrl || "/placeholder.svg",
+        source: "local",
+        userId
+      };
+      
+      // Store in localStorage as fallback
+      const localSkins = getLocalSkinsFromStorage(userId);
+      localSkins.push(fallbackSkin);
+      saveLocalSkinsToStorage(userId, localSkins);
+      
+      return fallbackSkin;
     }
+    
+    console.log("Found skin in API:", apiSkin);
     
     // Add to Firebase local_inventory
     const success = await addSkinToLocalInventory(userId, {
@@ -47,8 +73,30 @@ export const addLocalSkin = async (
     });
     
     if (!success) {
+      console.error("Failed to add skin to Firebase inventory");
       toast.error("Failed to add skin to inventory");
-      return null;
+      
+      // Fall back to localStorage
+      const localSkin: Skin = {
+        id: `local_${Date.now()}`,
+        name: skinData.name,
+        weapon: apiSkin.weapon || skinData.weapon || "Unknown",
+        category: apiSkin.category || skinData.category || "Unknown",
+        rarity: apiSkin.rarity || skinData.rarity || "Unknown",
+        float: skinData.float,
+        exterior: skinData.float ? calculateExteriorFromFloat(skinData.float) : undefined,
+        stattrak: skinData.stattrak,
+        souvenir: skinData.souvenir,
+        imageUrl: apiSkin.image || skinData.imageUrl || "/placeholder.svg",
+        source: "local",
+        userId
+      };
+      
+      const localSkins = getLocalSkinsFromStorage(userId);
+      localSkins.push(localSkin);
+      saveLocalSkinsToStorage(userId, localSkins);
+      
+      return localSkin;
     }
     
     // Get the newly added skin from the database
@@ -56,6 +104,7 @@ export const addLocalSkin = async (
     const newSkin = userSkins.length > 0 ? userSkins[0] : null;
     
     if (!newSkin) {
+      console.error("Failed to retrieve newly added skin");
       return null;
     }
     
@@ -83,21 +132,54 @@ export const addLocalSkin = async (
   }
 };
 
+// Helper functions to manage local storage as fallback
+const getLocalSkinsFromStorage = (userId: string): Skin[] => {
+  try {
+    const data = localStorage.getItem(`${LOCAL_SKINS_KEY}_${userId}`);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error("Error reading from localStorage:", e);
+    return [];
+  }
+};
+
+const saveLocalSkinsToStorage = (userId: string, skins: Skin[]) => {
+  try {
+    localStorage.setItem(`${LOCAL_SKINS_KEY}_${userId}`, JSON.stringify(skins));
+  } catch (e) {
+    console.error("Error writing to localStorage:", e);
+  }
+};
+
 // Remove a skin from local inventory in Firebase
 export const removeLocalSkin = async (userId: string, skinId: string): Promise<boolean> => {
   try {
+    // Try Firebase first
     const success = await deleteSkinFromLocalInventory(skinId);
     
+    // If Firebase fails, try localStorage
     if (!success) {
-      toast.error("Failed to remove skin");
-      return false;
+      const localSkins = getLocalSkinsFromStorage(userId);
+      const updatedSkins = localSkins.filter(skin => skin.id !== skinId);
+      saveLocalSkinsToStorage(userId, updatedSkins);
+      return true;
     }
     
     return true;
   } catch (error) {
     console.error("Error removing local skin:", error);
     toast.error("Failed to remove skin");
-    return false;
+    
+    // Try localStorage as fallback
+    try {
+      const localSkins = getLocalSkinsFromStorage(userId);
+      const updatedSkins = localSkins.filter(skin => skin.id !== skinId);
+      saveLocalSkinsToStorage(userId, updatedSkins);
+      return true;
+    } catch (e) {
+      console.error("Fallback removal failed:", e);
+      return false;
+    }
   }
 };
 

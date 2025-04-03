@@ -10,6 +10,7 @@ import { addLocalSkin, fetchAllSkins } from "@/services/skins";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface AddSkinFormProps {
   onSkinAdded: (skin: Skin) => void;
@@ -26,7 +27,11 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: allSkins = [] } = useQuery({
+  const { 
+    data: allSkins = [], 
+    isLoading,
+    error 
+  } = useQuery({
     queryKey: ['skins'],
     queryFn: fetchAllSkins,
   });
@@ -46,15 +51,41 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   }, []);
 
   useEffect(() => {
-    if (searchQuery.length > 2) {
-      const results = allSkins
-        .filter(skin => 
-          skin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (skin.weapon && typeof skin.weapon === 'string' && skin.weapon.toLowerCase().includes(searchQuery.toLowerCase()))
-        )
-        .slice(0, 5);
-      setSearchResults(results);
-      setIsDropdownOpen(results.length > 0);
+    console.log("Search query changed:", searchQuery);
+    console.log("All skins loaded:", allSkins.length);
+
+    if (searchQuery.length > 2 && allSkins.length > 0) {
+      try {
+        const results = allSkins
+          .filter(skin => {
+            try {
+              // Safely check if skin.name exists and is a string
+              const nameMatch = skin.name && typeof skin.name === 'string' 
+                ? skin.name.toLowerCase().includes(searchQuery.toLowerCase()) 
+                : false;
+                
+              // Safely check if skin.weapon exists and is a string
+              const weaponMatch = skin.weapon && typeof skin.weapon === 'string' 
+                ? skin.weapon.toLowerCase().includes(searchQuery.toLowerCase()) 
+                : false;
+                
+              return nameMatch || weaponMatch;
+            } catch (err) {
+              console.error("Error filtering skin:", err, skin);
+              return false;
+            }
+          })
+          .slice(0, 5);
+          
+        console.log("Search results:", results.length);
+        setSearchResults(results);
+        setIsDropdownOpen(results.length > 0);
+      } catch (err) {
+        console.error("Error processing search:", err);
+        toast.error("Error searching for skins");
+        setSearchResults([]);
+        setIsDropdownOpen(false);
+      }
     } else {
       setSearchResults([]);
       setIsDropdownOpen(false);
@@ -62,13 +93,17 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   }, [searchQuery, allSkins]);
 
   const handleSelectSkin = (skin: SkinApiItem) => {
+    console.log("Selected skin:", skin);
     setSelectedSkin(skin);
     setSearchQuery(skin.name);
     setIsDropdownOpen(false);
   };
 
   const handleAddSkin = () => {
-    if (!selectedSkin || !user) return;
+    if (!selectedSkin || !user) {
+      toast.error("Please select a skin and make sure you're logged in");
+      return;
+    }
 
     try {
       const floatValue = float ? parseFloat(float) : undefined;
@@ -90,6 +125,11 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
         imageUrl: selectedSkin.image || "",
       });
 
+      if (!newSkin) {
+        toast.error("Failed to add skin to inventory");
+        return;
+      }
+
       onSkinAdded(newSkin);
       
       // Reset form
@@ -105,6 +145,24 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
       toast.error("Failed to add skin");
     }
   };
+
+  if (error) {
+    console.error("Error loading skins:", error);
+    return (
+      <div className="blueprint-card w-full">
+        <h2 className="text-lg font-bold mb-4 text-destructive">Error loading skins</h2>
+        <p className="text-sm text-muted-foreground">
+          There was a problem loading the skins database. Please try again later.
+        </p>
+        <Button 
+          onClick={() => window.location.reload()}
+          className="mt-4"
+        >
+          Reload Page
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="blueprint-card w-full">
@@ -123,34 +181,54 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by weapon or skin name..."
               className="pl-9 blueprint-input"
+              disabled={isLoading}
             />
           </div>
           
+          {isLoading && (
+            <div className="mt-2 space-y-2">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          )}
+          
           {isDropdownOpen && (
             <div className="absolute z-10 w-full mt-1 bg-card border border-primary/30 rounded-md shadow-lg max-h-60 overflow-y-auto">
-              {searchResults.map((skin) => (
-                <div
-                  key={skin.id}
-                  className="p-2 hover:bg-primary/10 cursor-pointer flex items-center gap-2"
-                  onClick={() => handleSelectSkin(skin)}
-                >
-                  {skin.image && (
-                    <div className="w-8 h-8 bg-black/20 rounded flex-shrink-0">
-                      <img
-                        src={skin.image}
-                        alt={skin.name}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <div className="text-sm font-medium">{skin.name}</div>
-                    {skin.weapon && (
-                      <div className="text-xs text-muted-foreground">{skin.weapon}</div>
+              {searchResults.length > 0 ? (
+                searchResults.map((skin) => (
+                  <div
+                    key={skin.id}
+                    className="p-2 hover:bg-primary/10 cursor-pointer flex items-center gap-2"
+                    onClick={() => handleSelectSkin(skin)}
+                  >
+                    {skin.image && (
+                      <div className="w-8 h-8 bg-black/20 rounded flex-shrink-0">
+                        <img
+                          src={skin.image}
+                          alt={skin.name}
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            // Replace broken image with placeholder
+                            (e.target as HTMLImageElement).src = '/placeholder.svg';
+                          }}
+                        />
+                      </div>
                     )}
+                    <div>
+                      <div className="text-sm font-medium">{skin.name}</div>
+                      {skin.weapon && (
+                        <div className="text-xs text-muted-foreground">
+                          {typeof skin.weapon === 'string' ? skin.weapon : 'Unknown weapon'}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No results found
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>
