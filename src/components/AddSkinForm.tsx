@@ -50,7 +50,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
       const results = allSkins
         .filter(skin => 
           skin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (skin.weapon && skin.weapon.toLowerCase().includes(searchQuery.toLowerCase()))
+          (skin.weapon && typeof skin.weapon === 'string' && skin.weapon.toLowerCase().includes(searchQuery.toLowerCase()))
         )
         .slice(0, 5);
       setSearchResults(results);
