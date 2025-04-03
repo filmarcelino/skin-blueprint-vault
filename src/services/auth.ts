@@ -1,9 +1,28 @@
-
 import { toast } from "sonner";
-import { supabase } from "./supabase";
+import { supabase, isFallbackMode } from "./supabase";
 import { User } from "@/types";
 
+const LOCAL_USER_KEY = 'skinculator_user';
+
+const saveUserToLocalStorage = (user: User): void => {
+  localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(user));
+};
+
+const getUserFromLocalStorage = (): User | null => {
+  try {
+    const user = localStorage.getItem(LOCAL_USER_KEY);
+    return user ? JSON.parse(user) : null;
+  } catch (error) {
+    console.error('Error getting user from localStorage:', error);
+    return null;
+  }
+};
+
 export const getCurrentUser = async (): Promise<User | null> => {
+  if (isFallbackMode) {
+    return getUserFromLocalStorage();
+  }
+  
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -23,6 +42,31 @@ export const getCurrentUser = async (): Promise<User | null> => {
 };
 
 export const login = async (email: string, password: string): Promise<User | null> => {
+  if (isFallbackMode) {
+    try {
+      if (!email.includes('@') || password.length < 6) {
+        toast.error('Invalid email or password');
+        return null;
+      }
+      
+      const mockUser: User = {
+        id: `local_${Date.now()}`,
+        email: email,
+        displayName: email.split('@')[0],
+        avatarUrl: '',
+        steamId: null,
+      };
+      
+      saveUserToLocalStorage(mockUser);
+      toast.success('Logged in successfully (Fallback Mode)');
+      
+      return mockUser;
+    } catch (error) {
+      toast.error('Login failed');
+      return null;
+    }
+  }
+  
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -53,6 +97,31 @@ export const login = async (email: string, password: string): Promise<User | nul
 };
 
 export const register = async (email: string, password: string): Promise<User | null> => {
+  if (isFallbackMode) {
+    try {
+      if (!email.includes('@') || password.length < 6) {
+        toast.error('Invalid email or password. Password must be at least 6 characters.');
+        return null;
+      }
+      
+      const mockUser: User = {
+        id: `local_${Date.now()}`,
+        email: email,
+        displayName: email.split('@')[0],
+        avatarUrl: '',
+        steamId: null,
+      };
+      
+      saveUserToLocalStorage(mockUser);
+      toast.success('Registered successfully (Fallback Mode)');
+      
+      return mockUser;
+    } catch (error) {
+      toast.error('Registration failed');
+      return null;
+    }
+  }
+  
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -90,11 +159,29 @@ export const register = async (email: string, password: string): Promise<User | 
 };
 
 export const loginWithSteam = async (): Promise<void> => {
+  if (isFallbackMode) {
+    try {
+      const mockUser: User = {
+        id: `steam_${Date.now()}`,
+        email: `steam_user${Date.now()}@example.com`,
+        displayName: `Steam User ${Math.floor(Math.random() * 1000)}`,
+        avatarUrl: 'https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg',
+        steamId: '12345678901234567',
+      };
+      
+      saveUserToLocalStorage(mockUser);
+      toast.success('Logged in with Steam (Fallback Mode)');
+      
+      return;
+    } catch (error) {
+      toast.error('Steam login failed');
+      return;
+    }
+  }
+  
   try {
-    // Get the current URL to use as redirect URL
     const redirectTo = window.location.origin;
 
-    // Generate the Steam login URL
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "steam" as any,
       options: {
@@ -107,7 +194,6 @@ export const loginWithSteam = async (): Promise<void> => {
       return;
     }
 
-    // If URL is available, redirect to Steam auth page
     if (data?.url) {
       window.location.href = data.url;
     }
@@ -118,6 +204,12 @@ export const loginWithSteam = async (): Promise<void> => {
 };
 
 export const logout = async (): Promise<void> => {
+  if (isFallbackMode) {
+    localStorage.removeItem(LOCAL_USER_KEY);
+    toast.success("Logged out successfully");
+    return;
+  }
+  
   try {
     await supabase.auth.signOut();
     toast.success("Logged out successfully");
@@ -128,11 +220,13 @@ export const logout = async (): Promise<void> => {
 };
 
 export const initAuth = async (): Promise<void> => {
+  if (isFallbackMode) {
+    return;
+  }
+  
   try {
-    // This will set up auth state change listener
     const { data } = await supabase.auth.getSession();
     
-    // If user has logged in with Steam, update profile with Steam data
     if (data.session?.user?.app_metadata?.provider === 'steam') {
       updateSteamUserProfile(data.session.user.id);
     }
@@ -141,7 +235,6 @@ export const initAuth = async (): Promise<void> => {
   }
 };
 
-// Helper function to update user profile with Steam data
 const updateSteamUserProfile = async (userId: string): Promise<void> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -150,10 +243,8 @@ const updateSteamUserProfile = async (userId: string): Promise<void> => {
     
     const steamId = user.user_metadata.steamid64;
     
-    // Fetch Steam API key from config
     const steamApiKey = await getSteamApiKey();
     
-    // Fetch user data from Steam API
     const response = await fetch(
       `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${steamApiKey}&steamids=${steamId}`
     );
@@ -167,7 +258,6 @@ const updateSteamUserProfile = async (userId: string): Promise<void> => {
     if (steamData.response && steamData.response.players && steamData.response.players.length > 0) {
       const playerData = steamData.response.players[0];
       
-      // Update user metadata
       await supabase.auth.updateUser({
         data: {
           username: playerData.personaname || user.user_metadata.username,
@@ -180,7 +270,6 @@ const updateSteamUserProfile = async (userId: string): Promise<void> => {
   }
 };
 
-// Function to get the Steam API key from the config table
 const getSteamApiKey = async (): Promise<string> => {
   const { data, error } = await supabase
     .from('config')

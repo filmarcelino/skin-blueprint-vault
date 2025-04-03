@@ -1,7 +1,7 @@
 
 import { SkinApiItem, Skin } from "@/types";
 import { toast } from "sonner";
-import { getConfigValue, saveSkinData, getSkinDatabase } from "./supabase";
+import { getConfigValue, saveSkinData, getSkinDatabase, isFallbackMode } from "./supabase";
 
 // Local storage keys
 const LOCAL_SKINS_KEY = "skinculator_local_skins";
@@ -29,14 +29,15 @@ initApiConfig();
 
 export const fetchAllSkins = async (): Promise<SkinApiItem[]> => {
   try {
-    // First try to get from Supabase database
+    // First try to get from Supabase database or localStorage (in fallback mode)
     const dbSkins = await getSkinDatabase();
     if (dbSkins && dbSkins.length > 0) {
-      console.log(`Loaded ${dbSkins.length} skins from database`);
+      console.log(`Loaded ${dbSkins.length} skins from ${isFallbackMode ? 'localStorage' : 'database'}`);
       return dbSkins;
     }
     
     // If not available, fetch from API
+    console.log(`Fetching skins from API: ${SKINS_API_URL}`);
     const response = await fetch(SKINS_API_URL);
     if (!response.ok) {
       throw new Error("Failed to fetch skins");
@@ -45,10 +46,10 @@ export const fetchAllSkins = async (): Promise<SkinApiItem[]> => {
     const skins = await response.json();
     console.log(`Fetched ${skins.length} skins from API`);
     
-    // Save to Supabase database for future use
+    // Save to database or localStorage for future use
     saveSkinData(skins).then(success => {
       if (success) {
-        toast.success(`Saved ${skins.length} skins to database`);
+        toast.success(`Saved ${skins.length} skins to ${isFallbackMode ? 'localStorage' : 'database'}`);
       }
     });
     
