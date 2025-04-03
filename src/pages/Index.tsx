@@ -1,14 +1,47 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import Auth from "@/pages/Auth";
+import Dashboard from "@/pages/Dashboard";
+import { AuthProvider } from "@/context/AuthContext";
+import { Toaster } from "sonner";
+
+const queryClient = new QueryClient();
 
 const Index = () => {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Toaster position="top-right" />
+        <AppContent />
+      </AuthProvider>
+    </QueryClientProvider>
   );
+};
+
+const AppContent = () => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse-glow text-primary">Loading...</div>
+      </div>
+    );
+  }
+
+  return user ? <Dashboard /> : <Auth />;
 };
 
 export default Index;
