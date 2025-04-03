@@ -22,6 +22,13 @@ export const addLocalSkin = async (
     stattrak: boolean;
     souvenir: boolean;
     imageUrl?: string;
+    purchasePrice?: number;
+    purchaseDate?: string;
+    purchaseLocation?: string;
+    expectedSalePrice?: number;
+    tradeLock?: boolean;
+    tradeLockEndDate?: string;
+    comments?: string;
   }
 ): Promise<Skin | null> => {
   try {
@@ -47,7 +54,14 @@ export const addLocalSkin = async (
         souvenir: skinData.souvenir,
         imageUrl: skinData.imageUrl || "/placeholder.svg",
         source: "local",
-        userId
+        userId,
+        purchasePrice: skinData.purchasePrice,
+        purchaseDate: skinData.purchaseDate,
+        purchaseLocation: skinData.purchaseLocation,
+        expectedSalePrice: skinData.expectedSalePrice,
+        tradeLock: skinData.tradeLock,
+        tradeLockEndDate: skinData.tradeLockEndDate,
+        comments: skinData.comments
       };
       
       // Store in localStorage as fallback
@@ -69,7 +83,14 @@ export const addLocalSkin = async (
       float_value: skinData.float || 0,
       stattrak: skinData.stattrak,
       souvenir: skinData.souvenir,
-      image_url: apiSkin.image || skinData.imageUrl || ""
+      image_url: apiSkin.image || skinData.imageUrl || "",
+      purchase_price: skinData.purchasePrice,
+      purchase_date: skinData.purchaseDate,
+      purchase_location: skinData.purchaseLocation,
+      expected_sale_price: skinData.expectedSalePrice,
+      trade_lock: skinData.tradeLock || false,
+      trade_lock_end_date: skinData.tradeLockEndDate,
+      comments: skinData.comments
     });
     
     if (!success) {
@@ -89,7 +110,14 @@ export const addLocalSkin = async (
         souvenir: skinData.souvenir,
         imageUrl: apiSkin.image || skinData.imageUrl || "/placeholder.svg",
         source: "local",
-        userId
+        userId,
+        purchasePrice: skinData.purchasePrice,
+        purchaseDate: skinData.purchaseDate,
+        purchaseLocation: skinData.purchaseLocation,
+        expectedSalePrice: skinData.expectedSalePrice,
+        tradeLock: skinData.tradeLock,
+        tradeLockEndDate: skinData.tradeLockEndDate,
+        comments: skinData.comments
       };
       
       const localSkins = getLocalSkinsFromStorage(userId);
@@ -121,7 +149,14 @@ export const addLocalSkin = async (
       souvenir: newSkin.souvenir,
       imageUrl: newSkin.image_url,
       source: "local",
-      userId
+      userId,
+      purchasePrice: newSkin.purchase_price,
+      purchaseDate: newSkin.purchase_date,
+      purchaseLocation: newSkin.purchase_location,
+      expectedSalePrice: newSkin.expected_sale_price,
+      tradeLock: newSkin.trade_lock,
+      tradeLockEndDate: newSkin.trade_lock_end_date,
+      comments: newSkin.comments
     };
     
     return convertedSkin;
@@ -201,7 +236,14 @@ export const getLocalSkins = async (userId: string): Promise<Skin[]> => {
       souvenir: skin.souvenir,
       imageUrl: skin.image_url,
       source: "local",
-      userId
+      userId,
+      purchasePrice: skin.purchase_price,
+      purchaseDate: skin.purchase_date,
+      purchaseLocation: skin.purchase_location,
+      expectedSalePrice: skin.expected_sale_price,
+      tradeLock: skin.trade_lock,
+      tradeLockEndDate: skin.trade_lock_end_date,
+      comments: skin.comments
     }));
   } catch (error) {
     console.error("Error getting local skins:", error);

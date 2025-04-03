@@ -4,12 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Plus, Loader2 } from "lucide-react";
+import { Search, Plus, Loader2, Calendar } from "lucide-react";
 import { SkinApiItem, Skin } from "@/types";
 import { addLocalSkin } from "@/services/skins";
 import { searchSkins, fetchAllSkins } from "@/services/skins/api";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AddSkinFormProps {
   onSkinAdded: (skin: Skin) => void;
@@ -17,6 +22,7 @@ interface AddSkinFormProps {
 
 const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("basic");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSkin, setSelectedSkin] = useState<SkinApiItem | null>(null);
   const [float, setFloat] = useState<string>("");
@@ -28,6 +34,15 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
+  
+  // New fields
+  const [purchasePrice, setPurchasePrice] = useState<string>("");
+  const [purchaseDate, setPurchaseDate] = useState<Date | undefined>(undefined);
+  const [purchaseLocation, setPurchaseLocation] = useState<string>("");
+  const [expectedSalePrice, setExpectedSalePrice] = useState<string>("");
+  const [tradeLock, setTradeLock] = useState(false);
+  const [tradeLockEndDate, setTradeLockEndDate] = useState<Date | undefined>(undefined);
+  const [comments, setComments] = useState<string>("");
 
   // Pré-carregar skins para melhorar a experiência do usuário
   useEffect(() => {
@@ -139,6 +154,10 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
         
       const imageUrl = selectedSkin.image || "/placeholder.svg";
 
+      // Parse numeric values
+      const purchasePriceValue = purchasePrice ? parseFloat(purchasePrice) : undefined;
+      const expectedSalePriceValue = expectedSalePrice ? parseFloat(expectedSalePrice) : undefined;
+
       const newSkin = await addLocalSkin(user.id, {
         name: selectedSkin.name || "Unknown Skin",
         weapon: weaponName,
@@ -148,6 +167,14 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
         stattrak,
         souvenir,
         imageUrl,
+        // New fields
+        purchasePrice: purchasePriceValue,
+        purchaseDate: purchaseDate ? purchaseDate.toISOString() : undefined,
+        purchaseLocation,
+        expectedSalePrice: expectedSalePriceValue,
+        tradeLock,
+        tradeLockEndDate: tradeLockEndDate ? tradeLockEndDate.toISOString() : undefined,
+        comments
       });
 
       if (!newSkin) {
@@ -163,6 +190,13 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
       setFloat("");
       setStattrak(false);
       setSouvenir(false);
+      setPurchasePrice("");
+      setPurchaseDate(undefined);
+      setPurchaseLocation("");
+      setExpectedSalePrice("");
+      setTradeLock(false);
+      setTradeLockEndDate(undefined);
+      setComments("");
       
       toast.success("Skin adicionada ao seu inventário");
     } catch (error) {
@@ -228,8 +262,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
           )}
           
           {isDropdownOpen && (
-            <div className="fixed z-50 top-auto left-auto mt-1 bg-card border border-primary/30 rounded-md shadow-lg max-h-60 overflow-y-auto w-full max-w-[calc(100%-2rem)]" style={{
-              width: dropdownRef.current?.querySelector('input')?.offsetWidth,
+            <div className="absolute z-50 top-full left-0 mt-1 bg-card border border-primary/30 rounded-md shadow-lg overflow-y-auto w-full" style={{
               maxHeight: '300px'
             }}>
               {searchResults.length > 0 ? (
@@ -314,55 +347,192 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="float" className="text-sm text-muted-foreground block">
-                  Valor Float (0-1)
-                </Label>
-                <div className="space-y-1">
-                  <Input
-                    id="float"
-                    type="number"
-                    step="0.0001"
-                    min="0"
-                    max="1"
-                    value={float}
-                    onChange={(e) => setFloat(e.target.value)}
-                    placeholder="Ex: 0.1543"
-                    className="blueprint-input"
-                  />
-                  {float && (
-                    <div className="text-xs text-muted-foreground">
-                      Exterior: <span className="font-medium">{getFloatText()}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
+                <TabsTrigger value="advanced">Informações de Negociação</TabsTrigger>
+              </TabsList>
               
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="stattrak"
-                    checked={stattrak}
-                    onCheckedChange={(checked) => setStattrak(checked === true)}
-                  />
-                  <Label htmlFor="stattrak" className="text-sm">
-                    StatTrak™
-                  </Label>
+              <TabsContent value="basic" className="pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="float" className="text-sm text-muted-foreground block">
+                      Valor Float (0-1)
+                    </Label>
+                    <div className="space-y-1">
+                      <Input
+                        id="float"
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        max="1"
+                        value={float}
+                        onChange={(e) => setFloat(e.target.value)}
+                        placeholder="Ex: 0.1543"
+                        className="blueprint-input"
+                      />
+                      {float && (
+                        <div className="text-xs text-muted-foreground">
+                          Exterior: <span className="font-medium">{getFloatText()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="stattrak"
+                        checked={stattrak}
+                        onCheckedChange={(checked) => setStattrak(checked === true)}
+                      />
+                      <Label htmlFor="stattrak" className="text-sm">
+                        StatTrak™
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="souvenir"
+                        checked={souvenir}
+                        onCheckedChange={(checked) => setSouvenir(checked === true)}
+                      />
+                      <Label htmlFor="souvenir" className="text-sm">
+                        Souvenir
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="advanced" className="pt-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="purchasePrice" className="text-sm text-muted-foreground block">
+                      Preço de Compra (R$)
+                    </Label>
+                    <Input
+                      id="purchasePrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={purchasePrice}
+                      onChange={(e) => setPurchasePrice(e.target.value)}
+                      placeholder="R$ 0,00"
+                      className="blueprint-input"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground block">
+                      Data de Compra
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal"
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {purchaseDate ? format(purchaseDate, 'dd/MM/yyyy') : <span>Selecionar data</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <CalendarComponent
+                          mode="single"
+                          selected={purchaseDate}
+                          onSelect={setPurchaseDate}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
                 
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="souvenir"
-                    checked={souvenir}
-                    onCheckedChange={(checked) => setSouvenir(checked === true)}
-                  />
-                  <Label htmlFor="souvenir" className="text-sm">
-                    Souvenir
+                <div className="space-y-2">
+                  <Label htmlFor="purchaseLocation" className="text-sm text-muted-foreground block">
+                    Local de Compra
                   </Label>
+                  <Input
+                    id="purchaseLocation"
+                    value={purchaseLocation}
+                    onChange={(e) => setPurchaseLocation(e.target.value)}
+                    placeholder="Steam Market, Skinport, etc."
+                    className="blueprint-input"
+                  />
                 </div>
-              </div>
-            </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="expectedSalePrice" className="text-sm text-muted-foreground block">
+                      Preço Esperado de Venda (R$)
+                    </Label>
+                    <Input
+                      id="expectedSalePrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={expectedSalePrice}
+                      onChange={(e) => setExpectedSalePrice(e.target.value)}
+                      placeholder="R$ 0,00"
+                      className="blueprint-input"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Checkbox
+                        id="tradeLock"
+                        checked={tradeLock}
+                        onCheckedChange={(checked) => {
+                          const isChecked = checked === true;
+                          setTradeLock(isChecked);
+                          if (!isChecked) setTradeLockEndDate(undefined);
+                        }}
+                      />
+                      <Label htmlFor="tradeLock" className="text-sm">
+                        Trade Lock
+                      </Label>
+                    </div>
+                    
+                    {tradeLock && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {tradeLockEndDate ? format(tradeLockEndDate, 'dd/MM/yyyy') : <span>Data fim do trade lock</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <CalendarComponent
+                            mode="single"
+                            selected={tradeLockEndDate}
+                            onSelect={setTradeLockEndDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="comments" className="text-sm text-muted-foreground block">
+                    Observações
+                  </Label>
+                  <Textarea
+                    id="comments"
+                    value={comments}
+                    onChange={(e) => setComments(e.target.value)}
+                    placeholder="Informações adicionais sobre a skin..."
+                    className="min-h-[80px]"
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
             
             <div className="pt-2">
               <Button onClick={handleAddSkin} className="w-full" disabled={!selectedSkin}>

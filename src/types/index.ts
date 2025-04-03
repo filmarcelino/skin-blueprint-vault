@@ -20,6 +20,14 @@ export interface Skin {
   imageUrl: string;
   source: 'steam' | 'local';
   userId: string;
+  // New fields
+  purchasePrice?: number;
+  purchaseDate?: string;
+  purchaseLocation?: string;
+  expectedSalePrice?: number;
+  tradeLock?: boolean;
+  tradeLockEndDate?: string;
+  comments?: string;
 }
 
 export interface SkinApiItem {
@@ -41,3 +49,16 @@ export type Exterior =
   | "Testada em Campo" 
   | "Bem Desgastada" 
   | "Veterana de Guerra";
+
+export interface SkinsManager {
+  downloadAll: () => Promise<boolean>;
+  getStatus: () => Promise<DownloadStatus>;
+}
+
+export interface DownloadStatus {
+  totalSkins: number;
+  downloadedSkins: number;
+  lastUpdated: string;
+  isDownloading: boolean;
+  error?: string;
+}

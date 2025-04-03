@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import SteamCallback from "./pages/auth/SteamCallback";
 import { initApiConfig } from "./services/skins/api";
 import Dashboard from "./pages/Dashboard";
+import { initializeSkinsManager } from "./services/skins/skinsManager";
 
 const App = () => {
   // Inicializar API de skins quando o app carrega
@@ -15,6 +16,11 @@ const App = () => {
     // Iniciar configuração da API
     initApiConfig().catch(error => {
       console.error("Failed to initialize API config:", error);
+    });
+    
+    // Initialize skins database manager
+    initializeSkinsManager().catch(error => {
+      console.error("Failed to initialize skins manager:", error);
     });
   }, []);
 

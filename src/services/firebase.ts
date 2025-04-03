@@ -1,4 +1,3 @@
-
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser, updateProfile } from "firebase/auth";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, addDoc } from "firebase/firestore";
@@ -119,43 +118,6 @@ export const initAuth = async (): Promise<void> => {
   });
 };
 
-// Config functions
-export const getConfigValue = async (key: string): Promise<string | null> => {
-  try {
-    const docRef = doc(db, 'config', key);
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      return docSnap.data().value;
-    }
-    
-    // Return default values if not found
-    if (key === 'steam_api_key') return STEAM_API_KEY_DEFAULT;
-    if (key === 'bymykel_api_url') return BYMYKEL_API_URL_DEFAULT;
-    
-    return null;
-  } catch (error) {
-    console.error(`Error fetching config ${key}:`, error);
-    
-    // Return default values if fetch fails
-    if (key === 'steam_api_key') return STEAM_API_KEY_DEFAULT;
-    if (key === 'bymykel_api_url') return BYMYKEL_API_URL_DEFAULT;
-    
-    return null;
-  }
-};
-
-export const setConfigValue = async (key: string, value: string): Promise<boolean> => {
-  try {
-    await setDoc(doc(db, 'config', key), { value }, { merge: true });
-    return true;
-  } catch (error) {
-    console.error(`Error setting config ${key}:`, error);
-    toast.error(`Failed to save ${key}`);
-    return false;
-  }
-};
-
 // Helper functions for skin management
 export const calculateExteriorFromFloat = (float: number): string => {
   if (float >= 0 && float < 0.07) return "Nova de Fábrica";
@@ -185,6 +147,13 @@ export const addSkinToLocalInventory = async (userId: string, skinData: {
   stattrak: boolean;
   souvenir: boolean;
   image_url: string;
+  purchase_price?: number;
+  purchase_date?: string;
+  purchase_location?: string;
+  expected_sale_price?: number;
+  trade_lock?: boolean;
+  trade_lock_end_date?: string;
+  comments?: string;
 }): Promise<boolean> => {
   try {
     const exterior = calculateExteriorFromFloat(skinData.float_value);
@@ -282,6 +251,43 @@ export const getSkinDatabase = async (): Promise<any[]> => {
   } catch (error) {
     console.error('Error getting skin database:', error);
     return [];
+  }
+};
+
+// Config functions
+export const getConfigValue = async (key: string): Promise<string | null> => {
+  try {
+    const docRef = doc(db, 'config', key);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      return docSnap.data().value;
+    }
+    
+    // Return default values if not found
+    if (key === 'steam_api_key') return STEAM_API_KEY_DEFAULT;
+    if (key === 'bymykel_api_url') return BYMYKEL_API_URL_DEFAULT;
+    
+    return null;
+  } catch (error) {
+    console.error(`Error fetching config ${key}:`, error);
+    
+    // Return default values if fetch fails
+    if (key === 'steam_api_key') return STEAM_API_KEY_DEFAULT;
+    if (key === 'bymykel_api_url') return BYMYKEL_API_URL_DEFAULT;
+    
+    return null;
+  }
+};
+
+export const setConfigValue = async (key: string, value: string): Promise<boolean> => {
+  try {
+    await setDoc(doc(db, 'config', key), { value }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error(`Error setting config ${key}:`, error);
+    toast.error(`Failed to save ${key}`);
+    return false;
   }
 };
 
