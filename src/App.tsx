@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import SteamCallback from "./pages/auth/SteamCallback";
 import { initApiConfig } from "./services/skins/api";
+import Dashboard from "./pages/Dashboard";
 
 const App = () => {
   // Inicializar API de skins quando o app carrega
@@ -24,6 +25,7 @@ const App = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/auth/steam/callback" element={<SteamCallback />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

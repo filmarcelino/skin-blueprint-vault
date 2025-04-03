@@ -27,6 +27,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   const [isSearching, setIsSearching] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLDivElement>(null);
 
   // Pré-carregar skins para melhorar a experiência do usuário
   useEffect(() => {
@@ -89,7 +90,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   const handleSelectSkin = (skin: SkinApiItem) => {
     console.log("Selected skin:", skin);
     setSelectedSkin(skin);
-    setSearchQuery(skin.name);
+    setSearchQuery(skin.name || "");
     setIsDropdownOpen(false);
   };
 
@@ -126,20 +127,20 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
       // Extract standardized weapon and category
       const weaponName = typeof selectedSkin.weapon === 'string' ? 
         selectedSkin.weapon : 
-        (selectedSkin.weapon ? selectedSkin.weapon.toString() : "Unknown");
+        (selectedSkin.weapon ? String(selectedSkin.weapon) : "Unknown");
       
       const categoryName = typeof selectedSkin.category === 'string' ? 
         selectedSkin.category : 
-        (selectedSkin.category ? selectedSkin.category.toString() : "Unknown");
+        (selectedSkin.category ? String(selectedSkin.category) : "Unknown");
       
       const rarityName = typeof selectedSkin.rarity === 'string' ? 
         selectedSkin.rarity : 
-        (selectedSkin.rarity ? selectedSkin.rarity.toString() : "Common");
+        (selectedSkin.rarity ? String(selectedSkin.rarity) : "Common");
         
       const imageUrl = selectedSkin.image || "/placeholder.svg";
 
       const newSkin = await addLocalSkin(user.id, {
-        name: selectedSkin.name,
+        name: selectedSkin.name || "Unknown Skin",
         weapon: weaponName,
         category: categoryName,
         rarity: rarityName,
@@ -171,14 +172,14 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   };
 
   const getRarityColor = (skin: SkinApiItem): string => {
-    if ('rarityColor' in skin && skin.rarityColor) return skin.rarityColor;
+    if ('rarityColor' in skin && skin.rarityColor) return String(skin.rarityColor);
     
     // Fallback colors based on standard rarity names
     if (!skin.rarity) return "#9EA3B8"; // Default gray
     
     const rarityName = typeof skin.rarity === 'string' ? 
       skin.rarity.toLowerCase() : 
-      (skin.rarity ? skin.rarity.toString().toLowerCase() : "");
+      (skin.rarity ? String(skin.rarity).toLowerCase() : "");
       
     if (rarityName.includes("consumer") || rarityName.includes("comum")) return "#9EA3B8"; // Gray
     if (rarityName.includes("industrial") || rarityName.includes("industrial")) return "#5E98D9"; // Light blue
@@ -193,7 +194,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   };
 
   return (
-    <div className="blueprint-card w-full">
+    <div className="blueprint-card w-full" ref={formRef}>
       <h2 className="text-lg font-bold mb-4 glow-text">Adicionar Nova Skin</h2>
       
       <div className="space-y-4">
@@ -227,21 +228,24 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
           )}
           
           {isDropdownOpen && (
-            <div className="absolute z-50 w-full mt-1 bg-card border border-primary/30 rounded-md shadow-lg max-h-60 overflow-y-auto">
+            <div className="fixed z-50 top-auto left-auto mt-1 bg-card border border-primary/30 rounded-md shadow-lg max-h-60 overflow-y-auto w-full max-w-[calc(100%-2rem)]" style={{
+              width: dropdownRef.current?.querySelector('input')?.offsetWidth,
+              maxHeight: '300px'
+            }}>
               {searchResults.length > 0 ? (
-                searchResults.map((skin) => (
+                searchResults.map((item) => (
                   <div
-                    key={skin.id}
+                    key={item.id}
                     className="p-2 hover:bg-primary/10 cursor-pointer flex items-center gap-2"
-                    onClick={() => handleSelectSkin(skin)}
+                    onClick={() => handleSelectSkin(item)}
                   >
                     <div 
                       className="w-10 h-10 bg-black/20 rounded flex-shrink-0 border-2" 
-                      style={{ borderColor: getRarityColor(skin) }}
+                      style={{ borderColor: getRarityColor(item) }}
                     >
                       <img
-                        src={skin.image || '/placeholder.svg'}
-                        alt={skin.name}
+                        src={item.image || '/placeholder.svg'}
+                        alt={item.name || 'Skin'}
                         className="w-full h-full object-contain"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = '/placeholder.svg';
@@ -249,11 +253,11 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{skin.name}</div>
+                      <div className="text-sm font-medium truncate">{item.name || 'Unnamed Skin'}</div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {typeof skin.weapon === 'string' ? 
-                          skin.weapon : 
-                          (skin.weapon ? skin.weapon.toString() : 'Desconhecida')}
+                        {typeof item.weapon === 'string' ? 
+                          item.weapon : 
+                          (item.weapon ? String(item.weapon) : 'Desconhecida')}
                       </div>
                     </div>
                   </div>
@@ -276,7 +280,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
               >
                 <img
                   src={selectedSkin.image || '/placeholder.svg'}
-                  alt={selectedSkin.name}
+                  alt={selectedSkin.name || 'Skin'}
                   className="w-full h-full object-contain"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/placeholder.svg';
@@ -285,16 +289,16 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
               </div>
               
               <div className="flex-1">
-                <h3 className="font-medium">{selectedSkin.name}</h3>
+                <h3 className="font-medium">{selectedSkin.name || 'Unnamed Skin'}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {typeof skin.weapon === 'string' ? 
-                    skin.weapon : 
-                    (skin.weapon ? skin.weapon.toString() : 'Desconhecida')}
+                  {typeof selectedSkin.weapon === 'string' ? 
+                    selectedSkin.weapon : 
+                    (selectedSkin.weapon ? String(selectedSkin.weapon) : 'Desconhecida')}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {typeof skin.category === 'string' ? 
-                    skin.category : 
-                    (skin.category ? skin.category.toString() : 'Categoria Desconhecida')}
+                  {typeof selectedSkin.category === 'string' ? 
+                    selectedSkin.category : 
+                    (selectedSkin.category ? String(selectedSkin.category) : 'Categoria Desconhecida')}
                 </p>
                 <div 
                   className="inline-block px-2 py-0.5 rounded text-xs mt-1"
@@ -303,9 +307,9 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
                     color: getRarityColor(selectedSkin) 
                   }}
                 >
-                  {typeof skin.rarity === 'string' ? 
-                    skin.rarity : 
-                    (skin.rarity ? skin.rarity.toString() : 'Comum')}
+                  {typeof selectedSkin.rarity === 'string' ? 
+                    selectedSkin.rarity : 
+                    (selectedSkin.rarity ? String(selectedSkin.rarity) : 'Comum')}
                 </div>
               </div>
             </div>
@@ -373,4 +377,3 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
 };
 
 export default AddSkinForm;
-
