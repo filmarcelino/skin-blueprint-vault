@@ -96,7 +96,7 @@ export const loginWithSteam = async (): Promise<void> => {
 
     // Generate the Steam login URL
     const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "steam",
+      provider: "steam" as any,
       options: {
         redirectTo
       }

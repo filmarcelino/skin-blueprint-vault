@@ -53,9 +53,13 @@ const Dashboard = () => {
   const handleDeleteLocalSkin = async (skinId: string) => {
     if (!user) return;
     
-    const success = await removeLocalSkin(user.id, skinId);
-    if (success) {
-      setLocalSkins(prevSkins => prevSkins.filter(skin => skin.id !== skinId));
+    try {
+      const success = await removeLocalSkin(user.id, skinId);
+      if (success) {
+        setLocalSkins(prevSkins => prevSkins.filter(skin => skin.id !== skinId));
+      }
+    } catch (error) {
+      console.error("Error deleting skin:", error);
     }
   };
 

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { getApiKey, setApiKey } from "@/services/supabase";
+import { getConfigValue, setConfigValue } from "@/services/supabase";
 import { downloadSkinsData } from "@/services/skins";
 import { Download, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -21,10 +21,10 @@ const ApiKeysManager = () => {
   const loadApiKeys = async () => {
     setIsLoading(true);
     try {
-      const steamKey = await getApiKey("steam_api_key");
+      const steamKey = await getConfigValue("steam_api_key");
       if (steamKey) setSteamApiKey(steamKey);
 
-      const byMykelUrl = await getApiKey("bymykel_api_url");
+      const byMykelUrl = await getConfigValue("bymykel_api_url");
       if (byMykelUrl) setByMykelApiUrl(byMykelUrl);
     } catch (error) {
       console.error("Error loading API keys:", error);
@@ -37,8 +37,8 @@ const ApiKeysManager = () => {
   const handleSaveKeys = async () => {
     setIsLoading(true);
     try {
-      const steamSuccess = await setApiKey("steam_api_key", steamApiKey);
-      const byMykelSuccess = await setApiKey(
+      const steamSuccess = await setConfigValue("steam_api_key", steamApiKey);
+      const byMykelSuccess = await setConfigValue(
         "bymykel_api_url",
         byMykelApiUrl || "https://bymykel.github.io/CSGO-API/api/pt-BR/skins.json"
       );

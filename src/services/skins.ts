@@ -1,6 +1,7 @@
+
 import { SkinApiItem, Skin } from "@/types";
 import { toast } from "sonner";
-import { getApiKey, saveSkinData, getSkinDatabase } from "./supabase";
+import { getConfigValue, saveSkinData, getSkinDatabase } from "./supabase";
 
 // Local storage keys
 const LOCAL_SKINS_KEY = "skinculator_local_skins";
@@ -12,7 +13,7 @@ let SKINS_API_URL = "https://bymykel.github.io/CSGO-API/api/pt-BR/skins.json";
 // Initialize API URLs from Supabase
 export const initApiConfig = async () => {
   try {
-    const byMykelApiUrl = await getApiKey('bymykel_api_url');
+    const byMykelApiUrl = await getConfigValue('bymykel_api_url');
     if (byMykelApiUrl) {
       SKINS_API_URL = byMykelApiUrl;
     }
@@ -192,15 +193,16 @@ export const addLocalSkin = (userId: string, skin: Omit<Skin, "id" | "userId" | 
   }
 };
 
-export const removeLocalSkin = (userId: string, skinId: string): void => {
+export const removeLocalSkin = (userId: string, skinId: string): boolean => {
   try {
     const localSkins = getLocalSkins(userId);
     const updatedSkins = localSkins.filter(skin => skin.id !== skinId);
     localStorage.setItem(`${LOCAL_SKINS_KEY}_${userId}`, JSON.stringify(updatedSkins));
+    return true;
   } catch (error) {
     console.error("Error removing local skin:", error);
     toast.error("Failed to remove skin");
-    throw error;
+    return false;
   }
 };
 
