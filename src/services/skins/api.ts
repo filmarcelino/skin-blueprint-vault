@@ -306,10 +306,10 @@ export const searchSkins = async (query: string): Promise<SkinApiItem[]> => {
         if (skin.weapon) {
           if (typeof skin.weapon === 'string') {
             weaponMatch = skin.weapon.toLowerCase().includes(normalizedQuery);
-          } else if (typeof skin.weapon === 'object') {
-            if (skin.weapon && typeof skin.weapon.toString === 'function') {
-              weaponMatch = skin.weapon.toString().toLowerCase().includes(normalizedQuery);
-            }
+          } else {
+            // Corrigindo o erro de TypeScript - evitando chamar toString() diretamente
+            const weaponString = String(skin.weapon);
+            weaponMatch = weaponString.toLowerCase().includes(normalizedQuery);
           }
         }
         
@@ -318,10 +318,10 @@ export const searchSkins = async (query: string): Promise<SkinApiItem[]> => {
         if (skin.pattern) {
           if (typeof skin.pattern === 'string') {
             patternMatch = skin.pattern.toLowerCase().includes(normalizedQuery);
-          } else if (typeof skin.pattern === 'object') {
-            if (skin.pattern && typeof skin.pattern.toString === 'function') {
-              patternMatch = skin.pattern.toString().toLowerCase().includes(normalizedQuery);
-            }
+          } else {
+            // Corrigindo o erro de TypeScript - evitando chamar toString() diretamente
+            const patternString = String(skin.pattern);
+            patternMatch = patternString.toLowerCase().includes(normalizedQuery);
           }
         }
         
@@ -341,8 +341,9 @@ export const searchSkins = async (query: string): Promise<SkinApiItem[]> => {
       if (skin.weapon) {
         if (typeof skin.weapon === 'string') {
           weaponName = skin.weapon;
-        } else if (typeof skin.weapon === 'object') {
-          weaponName = skin.weapon.toString();
+        } else {
+          // Corrigindo o erro de TypeScript
+          weaponName = String(skin.weapon);
         }
       }
       
@@ -351,8 +352,9 @@ export const searchSkins = async (query: string): Promise<SkinApiItem[]> => {
       if (skin.category) {
         if (typeof skin.category === 'string') {
           categoryName = skin.category;
-        } else if (typeof skin.category === 'object') {
-          categoryName = skin.category.toString();
+        } else {
+          // Corrigindo o erro de TypeScript
+          categoryName = String(skin.category);
         }
       }
       
@@ -362,8 +364,9 @@ export const searchSkins = async (query: string): Promise<SkinApiItem[]> => {
       if (skin.rarity) {
         if (typeof skin.rarity === 'string') {
           rarityName = skin.rarity;
-        } else if (typeof skin.rarity === 'object') {
-          rarityName = skin.rarity.toString();
+        } else {
+          // Corrigindo o erro de TypeScript
+          rarityName = String(skin.rarity);
           // Don't try to access color property directly as it might be undefined
           if (skin.rarity && typeof skin.rarity === 'object' && 'color' in skin.rarity) {
             const color = (skin.rarity as any).color;

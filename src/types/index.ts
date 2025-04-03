@@ -34,13 +34,14 @@ export interface SkinApiItem {
   id: string;
   name: string;
   description?: string;
-  weapon?: string;
-  category?: string;
-  pattern?: string;
+  weapon?: string | object;
+  category?: string | object;
+  pattern?: string | object;
   min_float?: number;
   max_float?: number;
-  rarity?: string;
+  rarity?: string | { name: string; color?: string };
   image?: string;
+  [key: string]: any; // Allow additional properties that might come from the API
 }
 
 export type Exterior = 
