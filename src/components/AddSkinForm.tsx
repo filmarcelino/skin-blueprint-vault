@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,6 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
   
-  // New fields
   const [purchasePrice, setPurchasePrice] = useState<string>("");
   const [purchaseDate, setPurchaseDate] = useState<Date | undefined>(undefined);
   const [purchaseLocation, setPurchaseLocation] = useState<string>("");
@@ -45,7 +43,6 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   const [tradeLockEndDate, setTradeLockEndDate] = useState<Date | undefined>(undefined);
   const [comments, setComments] = useState<string>("");
 
-  // Pré-carregar skins para melhorar a experiência do usuário
   useEffect(() => {
     const loadSkins = async () => {
       try {
@@ -54,7 +51,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
         setIsLoaded(true);
       } catch (error) {
         console.error("Failed to preload skins:", error);
-        setIsLoaded(true); // Even on error, mark as loaded
+        setIsLoaded(true);
       }
     };
     
@@ -62,7 +59,6 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   }, []);
 
   useEffect(() => {
-    // Handle click outside to close dropdown
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
@@ -75,7 +71,6 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
     };
   }, []);
 
-  // Função de pesquisa debounced
   useEffect(() => {
     if (searchQuery.length < 2) {
       setSearchResults([]);
@@ -98,7 +93,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
       } finally {
         setIsSearching(false);
       }
-    }, 300); // 300ms debounce
+    }, 300);
 
     return () => clearTimeout(delayDebounce);
   }, [searchQuery]);
@@ -134,20 +129,17 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
     try {
       const floatValue = float ? parseFloat(float) : undefined;
       
-      // Validate float
       if (floatValue !== undefined && (isNaN(floatValue) || floatValue < 0 || floatValue > 1)) {
         toast.error("O valor de float deve estar entre 0 e 1");
         return;
       }
 
-      // Get standardized properties using helper functions
       const skinName = getSkinName(selectedSkin);
       const weaponName = getSkinWeapon(selectedSkin);
       const categoryName = getSkinCategory(selectedSkin);
       const rarityName = getSkinRarity(selectedSkin);
       const imageUrl = getSkinImage(selectedSkin);
 
-      // Parse numeric values
       const purchasePriceValue = purchasePrice ? parseFloat(purchasePrice) : undefined;
       const expectedSalePriceValue = expectedSalePrice ? parseFloat(expectedSalePrice) : undefined;
 
@@ -160,7 +152,6 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
         stattrak,
         souvenir,
         imageUrl,
-        // New fields
         purchasePrice: purchasePriceValue,
         purchaseDate: purchaseDate ? purchaseDate.toISOString() : undefined,
         purchaseLocation,
@@ -177,7 +168,6 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
 
       onSkinAdded(newSkin);
       
-      // Reset form
       setSelectedSkin(null);
       setSearchQuery("");
       setFloat("");
@@ -198,15 +188,12 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
     }
   };
 
-  // Função para formatar as propriedades da skin para exibição
   const formatSkinProperty = (prop: any): string => {
     if (prop === null || prop === undefined) return "Desconhecido";
     if (typeof prop === 'string') return prop;
     if (typeof prop === 'number') return String(prop);
     if (typeof prop === 'object') {
-      // Se for um objeto, verificamos se tem uma propriedade 'name'
       if ('name' in prop && prop.name) return prop.name;
-      // Caso contrário, tentamos uma serialização simples
       try {
         return JSON.stringify(prop);
       } catch {
@@ -219,21 +206,20 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   const getRarityColor = (skin: SkinApiItem): string => {
     if ('rarityColor' in skin && skin.rarityColor) return String(skin.rarityColor);
     
-    // Fallback colors based on standard rarity names
-    if (!skin.rarity) return "#9EA3B8"; // Default gray
+    if (!skin.rarity) return "#9EA3B8";
     
     const rarityString = formatSkinProperty(skin.rarity).toLowerCase();
       
-    if (rarityString.includes("consumer") || rarityString.includes("comum")) return "#9EA3B8"; // Gray
-    if (rarityString.includes("industrial") || rarityString.includes("industrial")) return "#5E98D9"; // Light blue
-    if (rarityString.includes("mil-spec") || rarityString.includes("militar")) return "#4B69CD"; // Blue
-    if (rarityString.includes("restricted") || rarityString.includes("restrito")) return "#8847FF"; // Purple
-    if (rarityString.includes("classified") || rarityString.includes("secreto")) return "#D32CE6"; // Pink
-    if (rarityString.includes("covert") || rarityString.includes("oculto")) return "#EB4B4B"; // Red
-    if (rarityString.includes("extraordinary") || rarityString.includes("extraordinário")) return "#CAAB05"; // Gold
-    if (rarityString.includes("contraband") || rarityString.includes("contrabando")) return "#E4AE39"; // Yellow
+    if (rarityString.includes("consumer") || rarityString.includes("comum")) return "#9EA3B8";
+    if (rarityString.includes("industrial") || rarityString.includes("industrial")) return "#5E98D9";
+    if (rarityString.includes("mil-spec") || rarityString.includes("militar")) return "#4B69CD";
+    if (rarityString.includes("restricted") || rarityString.includes("restrito")) return "#8847FF";
+    if (rarityString.includes("classified") || rarityString.includes("secreto")) return "#D32CE6";
+    if (rarityString.includes("covert") || rarityString.includes("oculto")) return "#EB4B4B";
+    if (rarityString.includes("extraordinary") || rarityString.includes("extraordinário")) return "#CAAB05";
+    if (rarityString.includes("contraband") || rarityString.includes("contrabando")) return "#E4AE39";
     
-    return "#9EA3B8"; // Default gray
+    return "#9EA3B8";
   };
 
   return (
@@ -272,7 +258,8 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
           
           {isDropdownOpen && (
             <div className="absolute z-[9999] top-full left-0 mt-1 bg-card border border-primary/30 rounded-md shadow-lg overflow-y-auto w-full" style={{
-              maxHeight: '300px'
+              maxHeight: '300px',
+              position: 'absolute'
             }}>
               {searchResults.length > 0 ? (
                 searchResults.map((item) => (
