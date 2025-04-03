@@ -5,12 +5,14 @@ import { getLocalSkins, fetchSteamInventory, removeLocalSkin } from "@/services/
 import { Skin } from "@/types";
 import Header from "@/components/Header";
 import InventoryTabs from "@/components/InventoryTabs";
+import ApiKeysManager from "@/components/admin/ApiKeysManager";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [localSkins, setLocalSkins] = useState<Skin[]>([]);
   const [steamSkins, setSteamSkins] = useState<Skin[]>([]);
   const [isLoadingSteam, setIsLoadingSteam] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -20,6 +22,9 @@ const Dashboard = () => {
       if (user.steamId) {
         loadSteamInventory();
       }
+
+      // Check if user is admin (you can define this logic based on your needs)
+      setShowAdmin(user.email === "admin@skinculator.com" || localStorage.getItem("is_admin") === "true");
     }
   }, [user]);
 
@@ -58,6 +63,13 @@ const Dashboard = () => {
       
       <main className="flex-1 py-6">
         <div className="blueprint-container">
+          {showAdmin && (
+            <div className="mb-8">
+              <h1 className="text-2xl font-bold mb-6 px-2">Admin Panel</h1>
+              <ApiKeysManager />
+            </div>
+          )}
+          
           <h1 className="text-2xl font-bold mb-6 px-2">Your Inventory</h1>
           
           <InventoryTabs 
