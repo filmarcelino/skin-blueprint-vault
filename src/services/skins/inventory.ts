@@ -1,3 +1,4 @@
+
 import { Skin } from "@/types";
 import { toast } from "sonner";
 import { 
@@ -74,12 +75,32 @@ export const addLocalSkin = async (
     
     console.log("Found skin in API:", apiSkin);
     
+    // Convert API data to strings
+    const weaponString = typeof apiSkin.weapon === 'string' ? 
+      apiSkin.weapon : String(apiSkin.weapon || '');
+      
+    const categoryString = typeof apiSkin.category === 'string' ? 
+      apiSkin.category : String(apiSkin.category || '');
+      
+    let rarityString = '';
+    if (typeof apiSkin.rarity === 'string') {
+      rarityString = apiSkin.rarity;
+    } else if (apiSkin.rarity && typeof apiSkin.rarity === 'object') {
+      if ('name' in apiSkin.rarity && typeof apiSkin.rarity.name === 'string') {
+        rarityString = apiSkin.rarity.name;
+      } else {
+        rarityString = String(apiSkin.rarity);
+      }
+    } else {
+      rarityString = "Unknown";
+    }
+    
     // Add to Firebase local_inventory
     const success = await addSkinToLocalInventory(userId, {
       name: skinData.name,
-      weapon: apiSkin.weapon || skinData.weapon || "Unknown",
-      category: apiSkin.category || skinData.category || "Unknown",
-      rarity: apiSkin.rarity || skinData.rarity || "Unknown",
+      weapon: weaponString,
+      category: categoryString,
+      rarity: rarityString,
       float_value: skinData.float || 0,
       stattrak: skinData.stattrak,
       souvenir: skinData.souvenir,
@@ -101,9 +122,9 @@ export const addLocalSkin = async (
       const localSkin: Skin = {
         id: `local_${Date.now()}`,
         name: skinData.name,
-        weapon: apiSkin.weapon || skinData.weapon || "Unknown",
-        category: apiSkin.category || skinData.category || "Unknown",
-        rarity: apiSkin.rarity || skinData.rarity || "Unknown",
+        weapon: weaponString,
+        category: categoryString,
+        rarity: rarityString,
         float: skinData.float,
         exterior: skinData.float ? calculateExteriorFromFloat(skinData.float) : undefined,
         stattrak: skinData.stattrak,

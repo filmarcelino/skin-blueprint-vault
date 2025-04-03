@@ -150,7 +150,8 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
       
       const rarityName = typeof selectedSkin.rarity === 'string' ? 
         selectedSkin.rarity : 
-        (selectedSkin.rarity ? String(selectedSkin.rarity) : "Common");
+        (selectedSkin.rarity && typeof selectedSkin.rarity === 'object' && 'name' in selectedSkin.rarity ? 
+          selectedSkin.rarity.name : String(selectedSkin.rarity) || "Common");
         
       const imageUrl = selectedSkin.image || "/placeholder.svg";
 
@@ -213,7 +214,8 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
     
     const rarityName = typeof skin.rarity === 'string' ? 
       skin.rarity.toLowerCase() : 
-      (skin.rarity ? String(skin.rarity).toLowerCase() : "");
+      (skin.rarity && typeof skin.rarity === 'object' && 'name' in skin.rarity ? 
+        skin.rarity.name.toLowerCase() : String(skin.rarity).toLowerCase());
       
     if (rarityName.includes("consumer") || rarityName.includes("comum")) return "#9EA3B8"; // Gray
     if (rarityName.includes("industrial") || rarityName.includes("industrial")) return "#5E98D9"; // Light blue
@@ -225,6 +227,17 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
     if (rarityName.includes("contraband") || rarityName.includes("contrabando")) return "#E4AE39"; // Yellow
     
     return "#9EA3B8"; // Default gray
+  };
+
+  // Função para formatar as propriedades da skin para exibição
+  const formatSkinProperty = (prop: any): string => {
+    if (prop === null || prop === undefined) return "Desconhecido";
+    if (typeof prop === 'string') return prop;
+    if (typeof prop === 'object') {
+      if ('name' in prop && prop.name) return prop.name;
+      return JSON.stringify(prop);
+    }
+    return String(prop);
   };
 
   return (
@@ -288,9 +301,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">{item.name || 'Unnamed Skin'}</div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {typeof item.weapon === 'string' ? 
-                          item.weapon : 
-                          (item.weapon ? String(item.weapon) : 'Desconhecida')}
+                        {formatSkinProperty(item.weapon)}
                       </div>
                     </div>
                   </div>
@@ -324,14 +335,10 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
               <div className="flex-1">
                 <h3 className="font-medium">{selectedSkin.name || 'Unnamed Skin'}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {typeof selectedSkin.weapon === 'string' ? 
-                    selectedSkin.weapon : 
-                    (selectedSkin.weapon ? String(selectedSkin.weapon) : 'Desconhecida')}
+                  {formatSkinProperty(selectedSkin.weapon)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {typeof selectedSkin.category === 'string' ? 
-                    selectedSkin.category : 
-                    (selectedSkin.category ? String(selectedSkin.category) : 'Categoria Desconhecida')}
+                  {formatSkinProperty(selectedSkin.category)}
                 </p>
                 <div 
                   className="inline-block px-2 py-0.5 rounded text-xs mt-1"
@@ -340,9 +347,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
                     color: getRarityColor(selectedSkin) 
                   }}
                 >
-                  {typeof selectedSkin.rarity === 'string' ? 
-                    selectedSkin.rarity : 
-                    (selectedSkin.rarity ? String(selectedSkin.rarity) : 'Comum')}
+                  {formatSkinProperty(selectedSkin.rarity)}
                 </div>
               </div>
             </div>
@@ -506,7 +511,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
                             {tradeLockEndDate ? format(tradeLockEndDate, 'dd/MM/yyyy') : <span>Data fim do trade lock</span>}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
+                        <PopoverContent className="w-auto p-0" style={{ zIndex: 100 }}>
                           <CalendarComponent
                             mode="single"
                             selected={tradeLockEndDate}
