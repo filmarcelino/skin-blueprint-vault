@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getLocalSkins, fetchSteamInventory, removeLocalSkin } from "@/services/skins";
+import { fetchSteamInventory, getLocalSkins, removeLocalSkin } from "@/services/skins";
 import { Skin } from "@/types";
 import Header from "@/components/Header";
 import InventoryTabs from "@/components/InventoryTabs";
@@ -28,10 +28,14 @@ const Dashboard = () => {
     }
   }, [user]);
 
-  const loadLocalSkins = () => {
+  const loadLocalSkins = async () => {
     if (!user) return;
-    const skins = getLocalSkins(user.id);
-    setLocalSkins(skins);
+    try {
+      const skins = await getLocalSkins(user.id);
+      setLocalSkins(skins);
+    } catch (error) {
+      console.error("Error loading local skins:", error);
+    }
   };
 
   const loadSteamInventory = async () => {
@@ -46,11 +50,13 @@ const Dashboard = () => {
     }
   };
 
-  const handleDeleteLocalSkin = (skinId: string) => {
+  const handleDeleteLocalSkin = async (skinId: string) => {
     if (!user) return;
     
-    removeLocalSkin(user.id, skinId);
-    setLocalSkins(prevSkins => prevSkins.filter(skin => skin.id !== skinId));
+    const success = await removeLocalSkin(user.id, skinId);
+    if (success) {
+      setLocalSkins(prevSkins => prevSkins.filter(skin => skin.id !== skinId));
+    }
   };
 
   const handleAddLocalSkin = (skin: Skin) => {

@@ -1,6 +1,5 @@
 
-import { Exterior, Skin } from "@/types";
-import { toast } from "sonner";
+import { Skin } from "@/types";
 
 // Local storage keys
 export const LOCAL_SKINS_KEY = "skinculator_local_skins";
@@ -20,10 +19,8 @@ export const calculateExterior = (float?: number): string | undefined => {
 };
 
 // Export inventory to JSON file
-export const exportInventoryToJson = (userId: string): void => {
-  const localSkins = getLocalSkins(userId);
-  
-  const dataStr = JSON.stringify(localSkins, null, 2);
+export const exportInventoryToJson = (userId: string, skins: Skin[]): void => {
+  const dataStr = JSON.stringify(skins, null, 2);
   const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
   
   const exportFileDefaultName = `skinculator_inventory_${new Date().toISOString().slice(0, 10)}.json`;
@@ -32,18 +29,4 @@ export const exportInventoryToJson = (userId: string): void => {
   linkElement.setAttribute("href", dataUri);
   linkElement.setAttribute("download", exportFileDefaultName);
   linkElement.click();
-};
-
-// Get skins from local storage
-export const getLocalSkins = (userId: string): Skin[] => {
-  try {
-    const storedSkins = localStorage.getItem(`${LOCAL_SKINS_KEY}_${userId}`);
-    if (storedSkins) {
-      return JSON.parse(storedSkins);
-    }
-    return [];
-  } catch (error) {
-    console.error("Error getting local skins:", error);
-    return [];
-  }
 };

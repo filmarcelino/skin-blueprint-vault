@@ -1,20 +1,13 @@
 
 import { SkinApiItem } from "@/types";
 import { toast } from "sonner";
-import { getApiKey, saveSkinData, getSkinDatabase } from "../supabase";
-
-// API endpoints (will be fetched from Supabase if available)
-let SKINS_API_URL = "https://bymykel.github.io/CSGO-API/api/pt-BR/skins.json";
+import { getByMykelApiUrl, getSkinDatabase, saveSkinData } from "../supabase";
 
 // Initialize API URLs from Supabase
 export const initApiConfig = async () => {
   try {
-    const byMykelApiUrl = await getApiKey('bymykel_api_url');
-    if (byMykelApiUrl) {
-      SKINS_API_URL = byMykelApiUrl;
-    }
-    
-    // Initialize other API URLs or keys as needed
+    // We'll fetch the URL from Supabase config table
+    await getByMykelApiUrl();
   } catch (error) {
     console.error("Error initializing API config:", error);
   }
@@ -30,8 +23,9 @@ export const fetchAllSkins = async (): Promise<SkinApiItem[]> => {
       return dbSkins;
     }
     
-    // If not available, fetch from API
-    const response = await fetch(SKINS_API_URL);
+    // If not available, fetch from ByMykel API
+    const byMykelApiUrl = await getByMykelApiUrl();
+    const response = await fetch(byMykelApiUrl);
     if (!response.ok) {
       throw new Error("Failed to fetch skins");
     }
@@ -51,6 +45,21 @@ export const fetchAllSkins = async (): Promise<SkinApiItem[]> => {
     console.error("Error fetching skins:", error);
     toast.error("Failed to fetch skins database");
     return [];
+  }
+};
+
+// Find a specific skin by name
+export const findSkinByName = async (name: string): Promise<SkinApiItem | null> => {
+  try {
+    const allSkins = await fetchAllSkins();
+    const skin = allSkins.find(s => 
+      s.name.toLowerCase() === name.toLowerCase() ||
+      s.name.toLowerCase().includes(name.toLowerCase())
+    );
+    return skin || null;
+  } catch (error) {
+    console.error("Error finding skin by name:", error);
+    return null;
   }
 };
 

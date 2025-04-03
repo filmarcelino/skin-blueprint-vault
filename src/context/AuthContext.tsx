@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@/types";
 import { getCurrentUser, initAuth, login, loginWithSteam, logout, register } from "@/services/auth";
 import { toast } from "sonner";
+import { supabase } from "@/services/supabase";
 
 interface AuthContextType {
   user: User | null;
@@ -20,10 +21,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    initAuth();
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-    setIsLoading(false);
+    const loadUser = async () => {
+      await initAuth();
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+      setIsLoading(false);
+    };
+    
+    loadUser();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+          const updatedUser = await getCurrentUser();
+          setUser(updatedUser);
+        } else if (event === "SIGNED_OUT") {
+          setUser(null);
+        }
+      }
+    );
+
+    // Clean up subscription
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogin = async (email: string, password: string) => {
@@ -55,11 +77,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const handleLoginWithSteam = async () => {
-    await loginWithSteam();
+    try {
+      await loginWithSteam();
+    } catch (error) {
+      toast.error("Steam login failed");
+    }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setUser(null);
   };
 
