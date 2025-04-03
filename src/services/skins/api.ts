@@ -306,8 +306,10 @@ export const searchSkins = async (query: string): Promise<SkinApiItem[]> => {
         if (skin.weapon) {
           if (typeof skin.weapon === 'string') {
             weaponMatch = skin.weapon.toLowerCase().includes(normalizedQuery);
-          } else if (typeof skin.weapon === 'object' && skin.weapon.name) {
-            weaponMatch = skin.weapon.name.toLowerCase().includes(normalizedQuery);
+          } else if (typeof skin.weapon === 'object') {
+            if (skin.weapon && typeof skin.weapon.toString === 'function') {
+              weaponMatch = skin.weapon.toString().toLowerCase().includes(normalizedQuery);
+            }
           }
         }
         
@@ -316,8 +318,10 @@ export const searchSkins = async (query: string): Promise<SkinApiItem[]> => {
         if (skin.pattern) {
           if (typeof skin.pattern === 'string') {
             patternMatch = skin.pattern.toLowerCase().includes(normalizedQuery);
-          } else if (typeof skin.pattern === 'object' && skin.pattern.name) {
-            patternMatch = skin.pattern.name.toLowerCase().includes(normalizedQuery);
+          } else if (typeof skin.pattern === 'object') {
+            if (skin.pattern && typeof skin.pattern.toString === 'function') {
+              patternMatch = skin.pattern.toString().toLowerCase().includes(normalizedQuery);
+            }
           }
         }
         
@@ -337,8 +341,8 @@ export const searchSkins = async (query: string): Promise<SkinApiItem[]> => {
       if (skin.weapon) {
         if (typeof skin.weapon === 'string') {
           weaponName = skin.weapon;
-        } else if (typeof skin.weapon === 'object' && skin.weapon.name) {
-          weaponName = skin.weapon.name;
+        } else if (typeof skin.weapon === 'object') {
+          weaponName = skin.weapon.toString();
         }
       }
       
@@ -347,8 +351,8 @@ export const searchSkins = async (query: string): Promise<SkinApiItem[]> => {
       if (skin.category) {
         if (typeof skin.category === 'string') {
           categoryName = skin.category;
-        } else if (typeof skin.category === 'object' && skin.category.name) {
-          categoryName = skin.category.name;
+        } else if (typeof skin.category === 'object') {
+          categoryName = skin.category.toString();
         }
       }
       
@@ -359,12 +363,16 @@ export const searchSkins = async (query: string): Promise<SkinApiItem[]> => {
         if (typeof skin.rarity === 'string') {
           rarityName = skin.rarity;
         } else if (typeof skin.rarity === 'object') {
-          if (skin.rarity.name) rarityName = skin.rarity.name;
-          if (skin.rarity.color) rarityColor = skin.rarity.color;
+          rarityName = skin.rarity.toString();
+          // Don't try to access color property directly as it might be undefined
+          if (skin.rarity && typeof skin.rarity === 'object' && 'color' in skin.rarity) {
+            const color = (skin.rarity as any).color;
+            if (typeof color === 'string') rarityColor = color;
+          }
         }
       }
       
-      // Create normalized skin object
+      // Create normalized skin object with added rarityColor
       return {
         ...skin,
         weapon: weaponName,

@@ -124,17 +124,17 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
       }
 
       // Extract standardized weapon and category
-      const weaponName = selectedSkin.weapon ? 
-        (typeof selectedSkin.weapon === 'string' ? selectedSkin.weapon : selectedSkin.weapon.name || "Unknown") : 
-        "Unknown";
+      const weaponName = typeof selectedSkin.weapon === 'string' ? 
+        selectedSkin.weapon : 
+        (selectedSkin.weapon ? selectedSkin.weapon.toString() : "Unknown");
       
-      const categoryName = selectedSkin.category ? 
-        (typeof selectedSkin.category === 'string' ? selectedSkin.category : selectedSkin.category.name || "Unknown") : 
-        "Unknown";
+      const categoryName = typeof selectedSkin.category === 'string' ? 
+        selectedSkin.category : 
+        (selectedSkin.category ? selectedSkin.category.toString() : "Unknown");
       
-      const rarityName = selectedSkin.rarity ? 
-        (typeof selectedSkin.rarity === 'string' ? selectedSkin.rarity : selectedSkin.rarity.name || "Common") : 
-        "Common";
+      const rarityName = typeof selectedSkin.rarity === 'string' ? 
+        selectedSkin.rarity : 
+        (selectedSkin.rarity ? selectedSkin.rarity.toString() : "Common");
         
       const imageUrl = selectedSkin.image || "/placeholder.svg";
 
@@ -171,14 +171,14 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   };
 
   const getRarityColor = (skin: SkinApiItem): string => {
-    if (skin.rarityColor) return skin.rarityColor;
+    if ('rarityColor' in skin && skin.rarityColor) return skin.rarityColor;
     
     // Fallback colors based on standard rarity names
     if (!skin.rarity) return "#9EA3B8"; // Default gray
     
     const rarityName = typeof skin.rarity === 'string' ? 
       skin.rarity.toLowerCase() : 
-      (skin.rarity.name ? skin.rarity.name.toLowerCase() : "");
+      (skin.rarity ? skin.rarity.toString().toLowerCase() : "");
       
     if (rarityName.includes("consumer") || rarityName.includes("comum")) return "#9EA3B8"; // Gray
     if (rarityName.includes("industrial") || rarityName.includes("industrial")) return "#5E98D9"; // Light blue
@@ -227,7 +227,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
           )}
           
           {isDropdownOpen && (
-            <div className="absolute z-10 w-full mt-1 bg-card border border-primary/30 rounded-md shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-50 w-full mt-1 bg-card border border-primary/30 rounded-md shadow-lg max-h-60 overflow-y-auto">
               {searchResults.length > 0 ? (
                 searchResults.map((skin) => (
                   <div
@@ -253,7 +253,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
                       <div className="text-xs text-muted-foreground truncate">
                         {typeof skin.weapon === 'string' ? 
                           skin.weapon : 
-                          (skin.weapon && skin.weapon.name ? skin.weapon.name : 'Desconhecida')}
+                          (skin.weapon ? skin.weapon.toString() : 'Desconhecida')}
                       </div>
                     </div>
                   </div>
@@ -287,14 +287,14 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
               <div className="flex-1">
                 <h3 className="font-medium">{selectedSkin.name}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {typeof selectedSkin.weapon === 'string' ? 
-                    selectedSkin.weapon : 
-                    (selectedSkin.weapon && selectedSkin.weapon.name ? selectedSkin.weapon.name : 'Desconhecida')}
+                  {typeof skin.weapon === 'string' ? 
+                    skin.weapon : 
+                    (skin.weapon ? skin.weapon.toString() : 'Desconhecida')}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {typeof selectedSkin.category === 'string' ? 
-                    selectedSkin.category : 
-                    (selectedSkin.category && selectedSkin.category.name ? selectedSkin.category.name : 'Categoria Desconhecida')}
+                  {typeof skin.category === 'string' ? 
+                    skin.category : 
+                    (skin.category ? skin.category.toString() : 'Categoria Desconhecida')}
                 </p>
                 <div 
                   className="inline-block px-2 py-0.5 rounded text-xs mt-1"
@@ -303,9 +303,9 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
                     color: getRarityColor(selectedSkin) 
                   }}
                 >
-                  {typeof selectedSkin.rarity === 'string' ? 
-                    selectedSkin.rarity : 
-                    (selectedSkin.rarity && selectedSkin.rarity.name ? selectedSkin.rarity.name : 'Comum')}
+                  {typeof skin.rarity === 'string' ? 
+                    skin.rarity : 
+                    (skin.rarity ? skin.rarity.toString() : 'Comum')}
                 </div>
               </div>
             </div>
@@ -373,3 +373,4 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
 };
 
 export default AddSkinForm;
+
