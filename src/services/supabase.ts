@@ -1,16 +1,24 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
 // Supabase client setup
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Provide default values to prevent the error when environment variables aren't available yet
+const safeSupabaseUrl = supabaseUrl || 'https://your-project-url.supabase.co';
+const safeSupabaseAnonKey = supabaseAnonKey || 'your-anon-key';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables');
+  // Adding a more detailed log for debugging
+  console.log('Environment variables state:', {
+    supabaseUrl: supabaseUrl ? 'defined' : 'undefined',
+    supabaseAnonKey: supabaseAnonKey ? 'defined' : 'undefined'
+  });
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(safeSupabaseUrl, safeSupabaseAnonKey);
 
 // API Keys table structure in Supabase:
 // - id: uuid (primary key)
