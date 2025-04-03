@@ -1,5 +1,5 @@
 
-import { getByMykelApiUrl } from "../firebase";
+import { getByMykelApiUrl as getFirebaseMykelApiUrl } from "../firebase";
 import { toast } from "sonner";
 
 // API configuration
@@ -9,7 +9,7 @@ let byMykelApiUrl: string = "https://bymykel.github.io/CSGO-API/api/pt-BR/skins.
 export const initApiConfig = async (): Promise<void> => {
   try {
     // We'll fetch the URL from Firebase config
-    const configUrl = await getByMykelApiUrl();
+    const configUrl = await getFirebaseMykelApiUrl();
     if (configUrl) {
       byMykelApiUrl = configUrl;
     }
@@ -20,4 +20,5 @@ export const initApiConfig = async (): Promise<void> => {
   }
 };
 
+// Get the current API URL
 export const getByMykelApiUrl = (): string => byMykelApiUrl;
