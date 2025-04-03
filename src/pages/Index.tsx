@@ -6,6 +6,7 @@ import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const queryClient = new QueryClient();
 
@@ -23,8 +24,10 @@ const Index = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Toaster position="top-right" />
-        <AppContent />
+        <TooltipProvider>
+          <Toaster position="top-right" />
+          <AppContent />
+        </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
