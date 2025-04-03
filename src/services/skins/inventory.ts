@@ -1,11 +1,17 @@
 
 import { Skin } from "@/types";
 import { toast } from "sonner";
-import { calculateExteriorFromFloat, getSteamApiKey, getUserLocalInventory, addSkinToLocalInventory, deleteSkinFromLocalInventory } from "../supabase";
+import { 
+  calculateExteriorFromFloat, 
+  getSteamApiKey, 
+  getUserLocalInventory, 
+  addSkinToLocalInventory, 
+  deleteSkinFromLocalInventory 
+} from "../firebase";
 import { findSkinByName } from "./api";
 import { LOCAL_SKINS_KEY, STEAM_SKINS_KEY } from "./utils";
 
-// Add a skin to local inventory in Supabase
+// Add a skin to local inventory in Firebase
 export const addLocalSkin = async (
   userId: string, 
   skinData: {
@@ -28,8 +34,8 @@ export const addLocalSkin = async (
       return null;
     }
     
-    // Add to Supabase local_inventory
-    const success = await addSkinToLocalInventory({
+    // Add to Firebase local_inventory
+    const success = await addSkinToLocalInventory(userId, {
       name: skinData.name,
       weapon: apiSkin.weapon || skinData.weapon || "Unknown",
       category: apiSkin.category || skinData.category || "Unknown",
@@ -46,7 +52,7 @@ export const addLocalSkin = async (
     }
     
     // Get the newly added skin from the database
-    const userSkins = await getUserLocalInventory();
+    const userSkins = await getUserLocalInventory(userId);
     const newSkin = userSkins.length > 0 ? userSkins[0] : null;
     
     if (!newSkin) {
@@ -77,7 +83,7 @@ export const addLocalSkin = async (
   }
 };
 
-// Remove a skin from local inventory in Supabase
+// Remove a skin from local inventory in Firebase
 export const removeLocalSkin = async (userId: string, skinId: string): Promise<boolean> => {
   try {
     const success = await deleteSkinFromLocalInventory(skinId);
@@ -95,10 +101,10 @@ export const removeLocalSkin = async (userId: string, skinId: string): Promise<b
   }
 };
 
-// Get user's local inventory from Supabase
+// Get user's local inventory from Firebase
 export const getLocalSkins = async (userId: string): Promise<Skin[]> => {
   try {
-    const skins = await getUserLocalInventory();
+    const skins = await getUserLocalInventory(userId);
     
     // Convert to the app's Skin type
     return skins.map(skin => ({

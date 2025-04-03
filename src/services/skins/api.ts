@@ -1,12 +1,12 @@
 
 import { SkinApiItem } from "@/types";
 import { toast } from "sonner";
-import { getByMykelApiUrl, getSkinDatabase, saveSkinData } from "../supabase";
+import { getByMykelApiUrl, getSkinDatabase, saveSkinData } from "../firebase";
 
-// Initialize API URLs from Supabase
+// Initialize API URLs from Firebase
 export const initApiConfig = async () => {
   try {
-    // We'll fetch the URL from Supabase config table
+    // We'll fetch the URL from Firebase config
     await getByMykelApiUrl();
   } catch (error) {
     console.error("Error initializing API config:", error);
@@ -16,7 +16,7 @@ export const initApiConfig = async () => {
 // Fetch all skins from database or API
 export const fetchAllSkins = async (): Promise<SkinApiItem[]> => {
   try {
-    // First try to get from Supabase database
+    // First try to get from Firebase database
     const dbSkins = await getSkinDatabase();
     if (dbSkins && dbSkins.length > 0) {
       console.log(`Loaded ${dbSkins.length} skins from database`);
@@ -33,7 +33,7 @@ export const fetchAllSkins = async (): Promise<SkinApiItem[]> => {
     const skins = await response.json();
     console.log(`Fetched ${skins.length} skins from API`);
     
-    // Save to Supabase database for future use
+    // Save to Firebase database for future use
     saveSkinData(skins).then(success => {
       if (success) {
         toast.success(`Saved ${skins.length} skins to database`);

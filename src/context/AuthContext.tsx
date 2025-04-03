@@ -1,9 +1,8 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@/types";
-import { getCurrentUser, initAuth, login, loginWithSteam, logout, register } from "@/services/auth";
-import { toast } from "sonner";
-import { supabase } from "@/services/supabase";
+import { auth, getCurrentUser, login, loginWithSteam, logout, register } from "@/services/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 interface AuthContextType {
   user: User | null;
@@ -22,7 +21,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const loadUser = async () => {
-      await initAuth();
       const currentUser = await getCurrentUser();
       setUser(currentUser);
       setIsLoading(false);
@@ -31,21 +29,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadUser();
 
     // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-          const updatedUser = await getCurrentUser();
-          setUser(updatedUser);
-        } else if (event === "SIGNED_OUT") {
-          setUser(null);
-        }
-      }
-    );
+    const unsubscribe = onAuthStateChanged(auth, async () => {
+      const updatedUser = await getCurrentUser();
+      setUser(updatedUser);
+      setIsLoading(false);
+    });
 
     // Clean up subscription
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
   const handleLogin = async (email: string, password: string) => {
@@ -55,7 +46,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(user);
       return user;
     } catch (error) {
-      toast.error("Login failed");
       return null;
     } finally {
       setIsLoading(false);
@@ -69,7 +59,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(user);
       return user;
     } catch (error) {
-      toast.error("Registration failed");
       return null;
     } finally {
       setIsLoading(false);
@@ -80,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await loginWithSteam();
     } catch (error) {
-      toast.error("Steam login failed");
+      console.error("Steam login error:", error);
     }
   };
 

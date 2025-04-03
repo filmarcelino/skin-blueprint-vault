@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { fetchSteamInventory, getLocalSkins, removeLocalSkin } from "@/services/skins";
@@ -5,7 +6,6 @@ import { Skin } from "@/types";
 import Header from "@/components/Header";
 import InventoryTabs from "@/components/InventoryTabs";
 import ApiKeysManager from "@/components/admin/ApiKeysManager";
-import { isFallbackMode } from "@/services/supabase";
 import { toast } from "sonner";
 
 const Dashboard = () => {
@@ -24,13 +24,8 @@ const Dashboard = () => {
         loadSteamInventory();
       }
 
-      // In fallback mode, show admin panel to anyone for demo purposes
-      // Otherwise check if user is admin based on email
-      if (isFallbackMode) {
-        setShowAdmin(true);
-      } else {
-        setShowAdmin(user.email === "admin@skinculator.com" || localStorage.getItem("is_admin") === "true");
-      }
+      // Show admin panel based on email
+      setShowAdmin(user.email === "admin@skinculator.com" || localStorage.getItem("is_admin") === "true");
     }
   }, [user]);
 
@@ -85,14 +80,6 @@ const Dashboard = () => {
       
       <main className="flex-1 py-6">
         <div className="blueprint-container">
-          {isFallbackMode && (
-            <div className="mb-6 px-2">
-              <p className="text-amber-600 text-sm">
-                <strong>Note:</strong> Running in fallback mode. Your data is stored in your browser's local storage and will be lost if you clear your browser data.
-              </p>
-            </div>
-          )}
-          
           {showAdmin && (
             <div className="mb-8">
               <h1 className="text-2xl font-bold mb-6 px-2">Admin Panel</h1>

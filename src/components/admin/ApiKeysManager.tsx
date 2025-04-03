@@ -1,129 +1,122 @@
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { getConfigValue, setConfigValue } from "@/services/supabase";
-import { downloadSkinsData } from "@/services/skins";
-import { Download, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
+import { getConfigValue, setConfigValue } from "@/services/firebase";
 
 const ApiKeysManager = () => {
   const [steamApiKey, setSteamApiKey] = useState("");
-  const [byMykelApiUrl, setByMykelApiUrl] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [bymykelUrl, setBymykelUrl] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadApiKeys();
+    const loadConfig = async () => {
+      try {
+        const steamKey = await getConfigValue("steam_api_key");
+        const apiUrl = await getConfigValue("bymykel_api_url");
+        
+        if (steamKey) setSteamApiKey(steamKey);
+        if (apiUrl) setBymykelUrl(apiUrl);
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error loading API keys:", error);
+        setIsLoading(false);
+      }
+    };
+    
+    loadConfig();
   }, []);
-
-  const loadApiKeys = async () => {
-    setIsLoading(true);
+  
+  const handleSaveSteamKey = async () => {
     try {
-      const steamKey = await getConfigValue("steam_api_key");
-      if (steamKey) setSteamApiKey(steamKey);
-
-      const byMykelUrl = await getConfigValue("bymykel_api_url");
-      if (byMykelUrl) setByMykelApiUrl(byMykelUrl);
-    } catch (error) {
-      console.error("Error loading API keys:", error);
-      toast.error("Failed to load API settings");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSaveKeys = async () => {
-    setIsLoading(true);
-    try {
-      const steamSuccess = await setConfigValue("steam_api_key", steamApiKey);
-      const byMykelSuccess = await setConfigValue(
-        "bymykel_api_url",
-        byMykelApiUrl || "https://bymykel.github.io/CSGO-API/api/pt-BR/skins.json"
-      );
-
-      if (steamSuccess && byMykelSuccess) {
-        toast.success("API settings saved successfully");
+      const success = await setConfigValue("steam_api_key", steamApiKey);
+      if (success) {
+        toast.success("Steam API key saved successfully");
       } else {
-        toast.error("Failed to save some API settings");
+        toast.error("Failed to save Steam API key");
       }
     } catch (error) {
-      console.error("Error saving API keys:", error);
-      toast.error("Failed to save API settings");
-    } finally {
-      setIsLoading(false);
+      console.error("Error saving Steam API key:", error);
+      toast.error("Failed to save Steam API key");
     }
   };
-
-  const handleDownloadSkinsData = async () => {
-    await downloadSkinsData();
+  
+  const handleSaveBymykelUrl = async () => {
+    try {
+      const success = await setConfigValue("bymykel_api_url", bymykelUrl);
+      if (success) {
+        toast.success("ByMykel API URL saved successfully");
+      } else {
+        toast.error("Failed to save ByMykel API URL");
+      }
+    } catch (error) {
+      console.error("Error saving ByMykel API URL:", error);
+      toast.error("Failed to save ByMykel API URL");
+    }
   };
+  
+  if (isLoading) {
+    return <div className="p-4 text-center">Loading configuration...</div>;
+  }
 
   return (
     <Card className="blueprint-card">
-      <CardHeader>
-        <CardTitle>API Settings</CardTitle>
-        <CardDescription>
-          Configure API keys and endpoints for Skinculator
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="steamApiKey">Steam API Key</Label>
-          <Input
-            id="steamApiKey"
-            type="password"
-            value={steamApiKey}
-            onChange={(e) => setSteamApiKey(e.target.value)}
-            placeholder="Enter your Steam API key"
-            className="blueprint-input"
-          />
-          <p className="text-xs text-muted-foreground">
-            Used for fetching Steam inventory data
+      <CardContent className="space-y-6 pt-6">
+        <div>
+          <h2 className="text-lg font-semibold mb-4">API Keys Configuration</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Configure API keys for external services.
           </p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="byMykelApiUrl">ByMykel Skins API URL</Label>
-          <Input
-            id="byMykelApiUrl"
-            value={byMykelApiUrl}
-            onChange={(e) => setByMykelApiUrl(e.target.value)}
-            placeholder="https://bymykel.github.io/CSGO-API/api/pt-BR/skins.json"
-            className="blueprint-input"
-          />
-          <p className="text-xs text-muted-foreground">
-            API endpoint for CS2 skins database
-          </p>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="steamApiKey">Steam Web API Key</Label>
+            <div className="flex gap-2">
+              <Input
+                id="steamApiKey"
+                value={steamApiKey}
+                onChange={(e) => setSteamApiKey(e.target.value)}
+                placeholder="Enter your Steam Web API Key"
+                className="flex-1"
+              />
+              <Button onClick={handleSaveSteamKey}>Save</Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Used for fetching Steam inventory data. Get one at{" "}
+              <a
+                href="https://steamcommunity.com/dev/apikey"
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary hover:underline"
+              >
+                steamcommunity.com/dev/apikey
+              </a>
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bymykelUrl">ByMykel CS2 API URL</Label>
+            <div className="flex gap-2">
+              <Input
+                id="bymykelUrl"
+                value={bymykelUrl}
+                onChange={(e) => setBymykelUrl(e.target.value)}
+                placeholder="Enter the ByMykel CS2 API URL"
+                className="flex-1"
+              />
+              <Button onClick={handleSaveBymykelUrl}>Save</Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              URL to fetch CS2 skins data from ByMykel's API.
+            </p>
+          </div>
         </div>
       </CardContent>
-      <CardFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={loadApiKeys}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-            Reload
-          </Button>
-          <Button
-            onClick={handleSaveKeys}
-            disabled={isLoading}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Save Settings
-          </Button>
-        </div>
-        <Button
-          variant="secondary"
-          onClick={handleDownloadSkinsData}
-        >
-          <Download className="mr-2 h-4 w-4" />
-          Download Skins Database
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
