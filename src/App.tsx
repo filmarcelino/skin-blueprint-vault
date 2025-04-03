@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import SteamCallback from "./pages/auth/SteamCallback";
 import { initApiConfig } from "./services/skins/api";
 
 const App = () => {
@@ -23,6 +24,7 @@ const App = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/auth/steam/callback" element={<SteamCallback />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

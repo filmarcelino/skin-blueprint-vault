@@ -4,13 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Loader2 } from "lucide-react";
 import { SkinApiItem, Skin } from "@/types";
-import { addLocalSkin, fetchAllSkins } from "@/services/skins";
+import { addLocalSkin } from "@/services/skins";
+import { searchSkins, fetchAllSkins } from "@/services/skins/api";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface AddSkinFormProps {
   onSkinAdded: (skin: Skin) => void;
@@ -25,16 +24,25 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   const [souvenir, setSouvenir] = useState(false);
   const [searchResults, setSearchResults] = useState<SkinApiItem[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { 
-    data: allSkins = [], 
-    isLoading,
-    error 
-  } = useQuery({
-    queryKey: ['skins'],
-    queryFn: fetchAllSkins,
-  });
+  // Pré-carregar skins para melhorar a experiência do usuário
+  useEffect(() => {
+    const loadSkins = async () => {
+      try {
+        setIsLoaded(false);
+        await fetchAllSkins();
+        setIsLoaded(true);
+      } catch (error) {
+        console.error("Failed to preload skins:", error);
+        setIsLoaded(true); // Even on error, mark as loaded
+      }
+    };
+    
+    loadSkins();
+  }, []);
 
   useEffect(() => {
     // Handle click outside to close dropdown
@@ -50,47 +58,33 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
     };
   }, []);
 
+  // Função de pesquisa debounced
   useEffect(() => {
-    console.log("Search query changed:", searchQuery);
-    console.log("All skins loaded:", allSkins.length);
-
-    if (searchQuery.length > 2 && allSkins.length > 0) {
-      try {
-        const results = allSkins
-          .filter(skin => {
-            try {
-              // Safely check if skin.name exists and is a string
-              const nameMatch = skin.name && typeof skin.name === 'string' 
-                ? skin.name.toLowerCase().includes(searchQuery.toLowerCase()) 
-                : false;
-                
-              // Safely check if skin.weapon exists and is a string
-              const weaponMatch = skin.weapon && typeof skin.weapon === 'string' 
-                ? skin.weapon.toLowerCase().includes(searchQuery.toLowerCase()) 
-                : false;
-                
-              return nameMatch || weaponMatch;
-            } catch (err) {
-              console.error("Error filtering skin:", err, skin);
-              return false;
-            }
-          })
-          .slice(0, 5);
-          
-        console.log("Search results:", results.length);
-        setSearchResults(results);
-        setIsDropdownOpen(results.length > 0);
-      } catch (err) {
-        console.error("Error processing search:", err);
-        toast.error("Error searching for skins");
-        setSearchResults([]);
-        setIsDropdownOpen(false);
-      }
-    } else {
+    if (searchQuery.length < 2) {
       setSearchResults([]);
       setIsDropdownOpen(false);
+      return;
     }
-  }, [searchQuery, allSkins]);
+    
+    console.log("Search query changed:", searchQuery);
+    
+    const delayDebounce = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const results = await searchSkins(searchQuery);
+        console.log(`Search returned ${results.length} results`);
+        
+        setSearchResults(results);
+        setIsDropdownOpen(results.length > 0);
+      } catch (error) {
+        console.error("Error searching skins:", error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery]);
 
   const handleSelectSkin = (skin: SkinApiItem) => {
     console.log("Selected skin:", skin);
@@ -99,9 +93,24 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
     setIsDropdownOpen(false);
   };
 
-  const handleAddSkin = () => {
+  const calculateExterior = (floatValue: number): string => {
+    if (floatValue >= 0 && floatValue < 0.07) return "Nova de Fábrica";
+    if (floatValue >= 0.07 && floatValue < 0.15) return "Pouco Usada";
+    if (floatValue >= 0.15 && floatValue < 0.38) return "Testada em Campo";
+    if (floatValue >= 0.38 && floatValue < 0.45) return "Bem Desgastada";
+    if (floatValue >= 0.45 && floatValue <= 1) return "Veterana de Guerra";
+    return "Desconhecido";
+  };
+
+  const getFloatText = (): string => {
+    const floatValue = parseFloat(float);
+    if (isNaN(floatValue) || floatValue < 0 || floatValue > 1) return "";
+    return calculateExterior(floatValue);
+  };
+
+  const handleAddSkin = async () => {
     if (!selectedSkin || !user) {
-      toast.error("Please select a skin and make sure you're logged in");
+      toast.error("Por favor, selecione uma skin e certifique-se de estar logado");
       return;
     }
 
@@ -110,23 +119,38 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
       
       // Validate float
       if (floatValue !== undefined && (isNaN(floatValue) || floatValue < 0 || floatValue > 1)) {
-        toast.error("Float value must be between 0 and 1");
+        toast.error("O valor de float deve estar entre 0 e 1");
         return;
       }
 
-      const newSkin = addLocalSkin(user.id, {
+      // Extract standardized weapon and category
+      const weaponName = selectedSkin.weapon ? 
+        (typeof selectedSkin.weapon === 'string' ? selectedSkin.weapon : selectedSkin.weapon.name || "Unknown") : 
+        "Unknown";
+      
+      const categoryName = selectedSkin.category ? 
+        (typeof selectedSkin.category === 'string' ? selectedSkin.category : selectedSkin.category.name || "Unknown") : 
+        "Unknown";
+      
+      const rarityName = selectedSkin.rarity ? 
+        (typeof selectedSkin.rarity === 'string' ? selectedSkin.rarity : selectedSkin.rarity.name || "Common") : 
+        "Common";
+        
+      const imageUrl = selectedSkin.image || "/placeholder.svg";
+
+      const newSkin = await addLocalSkin(user.id, {
         name: selectedSkin.name,
-        weapon: selectedSkin.weapon || "",
-        category: selectedSkin.category || "",
-        rarity: selectedSkin.rarity || "Common",
+        weapon: weaponName,
+        category: categoryName,
+        rarity: rarityName,
         float: floatValue,
         stattrak,
         souvenir,
-        imageUrl: selectedSkin.image || "",
+        imageUrl,
       });
 
       if (!newSkin) {
-        toast.error("Failed to add skin to inventory");
+        toast.error("Falha ao adicionar skin ao inventário");
         return;
       }
 
@@ -139,56 +163,66 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
       setStattrak(false);
       setSouvenir(false);
       
-      toast.success("Skin added to your inventory");
+      toast.success("Skin adicionada ao seu inventário");
     } catch (error) {
       console.error("Failed to add skin:", error);
-      toast.error("Failed to add skin");
+      toast.error("Falha ao adicionar skin");
     }
   };
 
-  if (error) {
-    console.error("Error loading skins:", error);
-    return (
-      <div className="blueprint-card w-full">
-        <h2 className="text-lg font-bold mb-4 text-destructive">Error loading skins</h2>
-        <p className="text-sm text-muted-foreground">
-          There was a problem loading the skins database. Please try again later.
-        </p>
-        <Button 
-          onClick={() => window.location.reload()}
-          className="mt-4"
-        >
-          Reload Page
-        </Button>
-      </div>
-    );
-  }
+  const getRarityColor = (skin: SkinApiItem): string => {
+    if (skin.rarityColor) return skin.rarityColor;
+    
+    // Fallback colors based on standard rarity names
+    if (!skin.rarity) return "#9EA3B8"; // Default gray
+    
+    const rarityName = typeof skin.rarity === 'string' ? 
+      skin.rarity.toLowerCase() : 
+      (skin.rarity.name ? skin.rarity.name.toLowerCase() : "");
+      
+    if (rarityName.includes("consumer") || rarityName.includes("comum")) return "#9EA3B8"; // Gray
+    if (rarityName.includes("industrial") || rarityName.includes("industrial")) return "#5E98D9"; // Light blue
+    if (rarityName.includes("mil-spec") || rarityName.includes("militar")) return "#4B69CD"; // Blue
+    if (rarityName.includes("restricted") || rarityName.includes("restrito")) return "#8847FF"; // Purple
+    if (rarityName.includes("classified") || rarityName.includes("secreto")) return "#D32CE6"; // Pink
+    if (rarityName.includes("covert") || rarityName.includes("oculto")) return "#EB4B4B"; // Red
+    if (rarityName.includes("extraordinary") || rarityName.includes("extraordinário")) return "#CAAB05"; // Gold
+    if (rarityName.includes("contraband") || rarityName.includes("contrabando")) return "#E4AE39"; // Yellow
+    
+    return "#9EA3B8"; // Default gray
+  };
 
   return (
     <div className="blueprint-card w-full">
-      <h2 className="text-lg font-bold mb-4 glow-text">Add New Skin</h2>
+      <h2 className="text-lg font-bold mb-4 glow-text">Adicionar Nova Skin</h2>
       
       <div className="space-y-4">
         <div className="relative" ref={dropdownRef}>
           <Label htmlFor="skinSearch" className="text-sm text-muted-foreground mb-1.5 block">
-            Search Skin
+            Pesquisar Skin
           </Label>
           <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            {isSearching ? (
+              <Loader2 className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground animate-spin" />
+            ) : (
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            )}
             <Input
               id="skinSearch"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by weapon or skin name..."
+              placeholder="Pesquise por arma ou nome da skin..."
               className="pl-9 blueprint-input"
-              disabled={isLoading}
+              disabled={!isLoaded}
             />
           </div>
           
-          {isLoading && (
-            <div className="mt-2 space-y-2">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
+          {!isLoaded && (
+            <div className="mt-2">
+              <p className="text-sm text-muted-foreground flex items-center">
+                <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                Carregando banco de dados de skins...
+              </p>
             </div>
           )}
           
@@ -201,32 +235,32 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
                     className="p-2 hover:bg-primary/10 cursor-pointer flex items-center gap-2"
                     onClick={() => handleSelectSkin(skin)}
                   >
-                    {skin.image && (
-                      <div className="w-8 h-8 bg-black/20 rounded flex-shrink-0">
-                        <img
-                          src={skin.image}
-                          alt={skin.name}
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            // Replace broken image with placeholder
-                            (e.target as HTMLImageElement).src = '/placeholder.svg';
-                          }}
-                        />
+                    <div 
+                      className="w-10 h-10 bg-black/20 rounded flex-shrink-0 border-2" 
+                      style={{ borderColor: getRarityColor(skin) }}
+                    >
+                      <img
+                        src={skin.image || '/placeholder.svg'}
+                        alt={skin.name}
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.svg';
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{skin.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {typeof skin.weapon === 'string' ? 
+                          skin.weapon : 
+                          (skin.weapon && skin.weapon.name ? skin.weapon.name : 'Desconhecida')}
                       </div>
-                    )}
-                    <div>
-                      <div className="text-sm font-medium">{skin.name}</div>
-                      {skin.weapon && (
-                        <div className="text-xs text-muted-foreground">
-                          {typeof skin.weapon === 'string' ? skin.weapon : 'Unknown weapon'}
-                        </div>
-                      )}
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="p-2 text-center text-sm text-muted-foreground">
-                  No results found
+                  Nenhum resultado encontrado
                 </div>
               )}
             </div>
@@ -235,22 +269,70 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
 
         {selectedSkin && (
           <>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="float" className="text-sm text-muted-foreground mb-1.5 block">
-                  Float Value (0-1)
-                </Label>
-                <Input
-                  id="float"
-                  type="number"
-                  step="0.0001"
-                  min="0"
-                  max="1"
-                  value={float}
-                  onChange={(e) => setFloat(e.target.value)}
-                  placeholder="e.g. 0.1543"
-                  className="blueprint-input"
+            <div className="flex items-start gap-4">
+              <div 
+                className="w-24 h-24 bg-black/20 rounded flex-shrink-0 border-2" 
+                style={{ borderColor: getRarityColor(selectedSkin) }}
+              >
+                <img
+                  src={selectedSkin.image || '/placeholder.svg'}
+                  alt={selectedSkin.name}
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/placeholder.svg';
+                  }}
                 />
+              </div>
+              
+              <div className="flex-1">
+                <h3 className="font-medium">{selectedSkin.name}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {typeof selectedSkin.weapon === 'string' ? 
+                    selectedSkin.weapon : 
+                    (selectedSkin.weapon && selectedSkin.weapon.name ? selectedSkin.weapon.name : 'Desconhecida')}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {typeof selectedSkin.category === 'string' ? 
+                    selectedSkin.category : 
+                    (selectedSkin.category && selectedSkin.category.name ? selectedSkin.category.name : 'Categoria Desconhecida')}
+                </p>
+                <div 
+                  className="inline-block px-2 py-0.5 rounded text-xs mt-1"
+                  style={{ 
+                    backgroundColor: getRarityColor(selectedSkin) + '33', 
+                    color: getRarityColor(selectedSkin) 
+                  }}
+                >
+                  {typeof selectedSkin.rarity === 'string' ? 
+                    selectedSkin.rarity : 
+                    (selectedSkin.rarity && selectedSkin.rarity.name ? selectedSkin.rarity.name : 'Comum')}
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="float" className="text-sm text-muted-foreground block">
+                  Valor Float (0-1)
+                </Label>
+                <div className="space-y-1">
+                  <Input
+                    id="float"
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    max="1"
+                    value={float}
+                    onChange={(e) => setFloat(e.target.value)}
+                    placeholder="Ex: 0.1543"
+                    className="blueprint-input"
+                  />
+                  {float && (
+                    <div className="text-xs text-muted-foreground">
+                      Exterior: <span className="font-medium">{getFloatText()}</span>
+                    </div>
+                  )}
+                </div>
               </div>
               
               <div className="space-y-3">
@@ -280,7 +362,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
             
             <div className="pt-2">
               <Button onClick={handleAddSkin} className="w-full" disabled={!selectedSkin}>
-                <Plus className="mr-2 h-4 w-4" /> Add to Inventory
+                <Plus className="mr-2 h-4 w-4" /> Adicionar ao Inventário
               </Button>
             </div>
           </>

@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Gamepad2 } from "lucide-react";
+import { Gamepad2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface LoginFormProps {
@@ -14,23 +14,32 @@ interface LoginFormProps {
 const LoginForm = ({ onToggle }: LoginFormProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSteamLoading, setSteamLoading] = useState(false);
   const { login, loginWithSteam, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      toast.error("Please fill all fields");
+      toast.error("Por favor, preencha todos os campos");
       return;
     }
     
     const user = await login(email, password);
     if (user) {
-      toast.success("Login successful");
+      toast.success("Login realizado com sucesso");
     }
   };
 
   const handleSteamLogin = async () => {
-    await loginWithSteam();
+    try {
+      setSteamLoading(true);
+      await loginWithSteam();
+    } catch (error) {
+      console.error("Erro no login com Steam:", error);
+      toast.error("Falha ao iniciar login com Steam");
+    } finally {
+      setSteamLoading(false);
+    }
   };
 
   return (
@@ -40,7 +49,7 @@ const LoginForm = ({ onToggle }: LoginFormProps) => {
           Login to SKIN<span className="text-primary">CULATOR</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-2">
-          Enter your credentials to access your account
+          Entre com suas credenciais para acessar sua conta
         </p>
       </div>
       
@@ -50,7 +59,7 @@ const LoginForm = ({ onToggle }: LoginFormProps) => {
           <Input
             id="email"
             type="email"
-            placeholder="your@email.com"
+            placeholder="seu@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="blueprint-input"
@@ -58,7 +67,7 @@ const LoginForm = ({ onToggle }: LoginFormProps) => {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">Senha</Label>
           <Input
             id="password"
             type="password"
@@ -70,7 +79,12 @@ const LoginForm = ({ onToggle }: LoginFormProps) => {
         </div>
         
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Logging in..." : "Login"}
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Entrando...
+            </>
+          ) : "Entrar"}
         </Button>
       </form>
       
@@ -80,7 +94,7 @@ const LoginForm = ({ onToggle }: LoginFormProps) => {
         </div>
         <div className="relative flex justify-center text-xs">
           <span className="bg-background px-2 text-muted-foreground">
-            or continue with
+            ou continue com
           </span>
         </div>
       </div>
@@ -88,17 +102,28 @@ const LoginForm = ({ onToggle }: LoginFormProps) => {
       <Button
         type="button"
         variant="outline"
-        className="w-full"
+        className="w-full relative overflow-hidden"
         onClick={handleSteamLogin}
+        disabled={isSteamLoading || isLoading}
       >
-        <Gamepad2 className="mr-2 h-4 w-4" />
-        Continue with Steam
+        {isSteamLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Conectando com Steam...
+          </>
+        ) : (
+          <>
+            <Gamepad2 className="mr-2 h-4 w-4" />
+            Continuar com Steam
+            <div className="absolute inset-0 bg-gradient-to-r from-[#1b2838]/0 via-[#1b2838]/30 to-[#1b2838]/0 translate-x-[-100%] animate-steamPulse"></div>
+          </>
+        )}
       </Button>
       
       <div className="text-center text-sm">
-        <span className="text-muted-foreground">Don't have an account? </span>
+        <span className="text-muted-foreground">Não tem uma conta? </span>
         <Button variant="link" className="p-0" onClick={onToggle}>
-          Register
+          Registrar
         </Button>
       </div>
     </div>

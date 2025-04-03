@@ -282,35 +282,104 @@ export const searchSkins = async (query: string): Promise<SkinApiItem[]> => {
     const normalizedQuery = query.toLowerCase().trim();
     console.log(`Searching skins with query: "${normalizedQuery}"`);
     
+    // Garantir que temos as skins carregadas
     const allSkins = await fetchAllSkins();
+    console.log(`Searching through ${allSkins.length} skins`);
+    
+    if (!allSkins || allSkins.length === 0) {
+      console.warn("No skins available to search through");
+      return [];
+    }
     
     // Melhorar o algoritmo de busca para retornar resultados mais relevantes
     const matchedSkins = allSkins.filter(skin => {
       if (!skin || typeof skin !== 'object') return false;
       
-      // Verificar nome da skin
-      const nameMatch = typeof skin.name === 'string' && 
-        skin.name.toLowerCase().includes(normalizedQuery);
-      
-      // Verificar nome da arma
-      const weaponMatch = skin.weapon && 
-        typeof skin.weapon === 'string' && 
-        skin.weapon.toLowerCase().includes(normalizedQuery);
-      
-      // Verificar padrão da skin
-      const patternMatch = skin.pattern && 
-        typeof skin.pattern === 'string' && 
-        skin.pattern.toLowerCase().includes(normalizedQuery);
-      
-      return nameMatch || weaponMatch || patternMatch;
+      try {
+        // Verificar nome da skin
+        const nameMatch = skin.name && 
+          typeof skin.name === 'string' && 
+          skin.name.toLowerCase().includes(normalizedQuery);
+        
+        // Verificar nome da arma
+        let weaponMatch = false;
+        if (skin.weapon) {
+          if (typeof skin.weapon === 'string') {
+            weaponMatch = skin.weapon.toLowerCase().includes(normalizedQuery);
+          } else if (typeof skin.weapon === 'object' && skin.weapon.name) {
+            weaponMatch = skin.weapon.name.toLowerCase().includes(normalizedQuery);
+          }
+        }
+        
+        // Verificar padrão da skin
+        let patternMatch = false;
+        if (skin.pattern) {
+          if (typeof skin.pattern === 'string') {
+            patternMatch = skin.pattern.toLowerCase().includes(normalizedQuery);
+          } else if (typeof skin.pattern === 'object' && skin.pattern.name) {
+            patternMatch = skin.pattern.name.toLowerCase().includes(normalizedQuery);
+          }
+        }
+        
+        return nameMatch || weaponMatch || patternMatch;
+      } catch (err) {
+        console.error("Error filtering skin in search:", err, skin);
+        return false;
+      }
     });
     
     console.log(`Found ${matchedSkins.length} skins matching "${query}"`);
     
+    // Normalizar os dados para garantir formato consistente
+    const normalizedResults = matchedSkins.map(skin => {
+      // Handle weapon being an object or string
+      let weaponName = "Unknown";
+      if (skin.weapon) {
+        if (typeof skin.weapon === 'string') {
+          weaponName = skin.weapon;
+        } else if (typeof skin.weapon === 'object' && skin.weapon.name) {
+          weaponName = skin.weapon.name;
+        }
+      }
+      
+      // Handle category being an object or string
+      let categoryName = "Unknown";
+      if (skin.category) {
+        if (typeof skin.category === 'string') {
+          categoryName = skin.category;
+        } else if (typeof skin.category === 'object' && skin.category.name) {
+          categoryName = skin.category.name;
+        }
+      }
+      
+      // Handle rarity being an object or string
+      let rarityName = "Common";
+      let rarityColor = "#9EA3B8";
+      if (skin.rarity) {
+        if (typeof skin.rarity === 'string') {
+          rarityName = skin.rarity;
+        } else if (typeof skin.rarity === 'object') {
+          if (skin.rarity.name) rarityName = skin.rarity.name;
+          if (skin.rarity.color) rarityColor = skin.rarity.color;
+        }
+      }
+      
+      // Create normalized skin object
+      return {
+        ...skin,
+        weapon: weaponName,
+        category: categoryName,
+        rarity: rarityName,
+        rarityColor: rarityColor
+      };
+    });
+    
     // Limitar para 20 resultados para evitar sobrecarga
-    return matchedSkins.slice(0, 20);
+    return normalizedResults.slice(0, 20);
   } catch (error) {
     console.error("Error searching skins:", error);
+    toast.error("Erro na pesquisa de skins");
+    
     // Em caso de erro, retorne alguns resultados de fallback para query comum
     if (query.toLowerCase().includes("asiimov")) {
       return ALL_FALLBACK_SKINS.filter(skin => skin.name.includes("Asiimov"));
@@ -324,3 +393,12 @@ export const searchSkins = async (query: string): Promise<SkinApiItem[]> => {
     return [];
   }
 };
+
+// Iniciar o carregamento de skins logo na inicialização para garantir disponibilidade
+(async () => {
+  try {
+    await fetchAllSkins();
+  } catch (error) {
+    console.error("Failed to preload skins:", error);
+  }
+})();
