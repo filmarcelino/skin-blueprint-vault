@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Steam } from "lucide-react";
+import { Gamepad2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface LoginFormProps {
@@ -91,7 +91,7 @@ const LoginForm = ({ onToggle }: LoginFormProps) => {
         className="w-full"
         onClick={handleSteamLogin}
       >
-        <Steam className="mr-2 h-4 w-4" />
+        <Gamepad2 className="mr-2 h-4 w-4" />
         Continue with Steam
       </Button>
       
