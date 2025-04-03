@@ -2,20 +2,32 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { initApiConfig } from "./services/skins/api";
 
-const App = () => (
-  <>
-    <Toaster />
-    <Sonner />
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
-  </>
-);
+const App = () => {
+  // Inicializar API de skins quando o app carrega
+  useEffect(() => {
+    // Iniciar configuração da API
+    initApiConfig().catch(error => {
+      console.error("Failed to initialize API config:", error);
+    });
+  }, []);
+
+  return (
+    <>
+      <Toaster />
+      <Sonner position="top-right" closeButton />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </>
+  );
+};
 
 export default App;
