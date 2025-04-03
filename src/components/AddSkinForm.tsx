@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getSkinProperty, getSkinName, getSkinWeapon, getSkinCategory, getSkinRarity, getSkinImage } from "@/types/skins";
 
 interface AddSkinFormProps {
   onSkinAdded: (skin: Skin) => void;
@@ -105,7 +106,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
   const handleSelectSkin = (skin: SkinApiItem) => {
     console.log("Selected skin:", skin);
     setSelectedSkin(skin);
-    setSearchQuery(skin.name || "");
+    setSearchQuery(getSkinName(skin));
     setIsDropdownOpen(false);
   };
 
@@ -139,28 +140,19 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
         return;
       }
 
-      // Extract standardized weapon and category
-      const weaponName = typeof selectedSkin.weapon === 'string' ? 
-        selectedSkin.weapon : 
-        (selectedSkin.weapon ? String(selectedSkin.weapon) : "Unknown");
-      
-      const categoryName = typeof selectedSkin.category === 'string' ? 
-        selectedSkin.category : 
-        (selectedSkin.category ? String(selectedSkin.category) : "Unknown");
-      
-      const rarityName = typeof selectedSkin.rarity === 'string' ? 
-        selectedSkin.rarity : 
-        (selectedSkin.rarity && typeof selectedSkin.rarity === 'object' && 'name' in selectedSkin.rarity ? 
-          selectedSkin.rarity.name : String(selectedSkin.rarity) || "Common");
-        
-      const imageUrl = selectedSkin.image || "/placeholder.svg";
+      // Get standardized properties using helper functions
+      const skinName = getSkinName(selectedSkin);
+      const weaponName = getSkinWeapon(selectedSkin);
+      const categoryName = getSkinCategory(selectedSkin);
+      const rarityName = getSkinRarity(selectedSkin);
+      const imageUrl = getSkinImage(selectedSkin);
 
       // Parse numeric values
       const purchasePriceValue = purchasePrice ? parseFloat(purchasePrice) : undefined;
       const expectedSalePriceValue = expectedSalePrice ? parseFloat(expectedSalePrice) : undefined;
 
       const newSkin = await addLocalSkin(user.id, {
-        name: selectedSkin.name || "Unknown Skin",
+        name: skinName,
         weapon: weaponName,
         category: categoryName,
         rarity: rarityName,
@@ -206,38 +198,42 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
     }
   };
 
+  // Função para formatar as propriedades da skin para exibição
+  const formatSkinProperty = (prop: any): string => {
+    if (prop === null || prop === undefined) return "Desconhecido";
+    if (typeof prop === 'string') return prop;
+    if (typeof prop === 'number') return String(prop);
+    if (typeof prop === 'object') {
+      // Se for um objeto, verificamos se tem uma propriedade 'name'
+      if ('name' in prop && prop.name) return prop.name;
+      // Caso contrário, tentamos uma serialização simples
+      try {
+        return JSON.stringify(prop);
+      } catch {
+        return "Objeto complexo";
+      }
+    }
+    return String(prop);
+  };
+
   const getRarityColor = (skin: SkinApiItem): string => {
     if ('rarityColor' in skin && skin.rarityColor) return String(skin.rarityColor);
     
     // Fallback colors based on standard rarity names
     if (!skin.rarity) return "#9EA3B8"; // Default gray
     
-    const rarityName = typeof skin.rarity === 'string' ? 
-      skin.rarity.toLowerCase() : 
-      (skin.rarity && typeof skin.rarity === 'object' && 'name' in skin.rarity ? 
-        skin.rarity.name.toLowerCase() : String(skin.rarity).toLowerCase());
+    const rarityString = formatSkinProperty(skin.rarity).toLowerCase();
       
-    if (rarityName.includes("consumer") || rarityName.includes("comum")) return "#9EA3B8"; // Gray
-    if (rarityName.includes("industrial") || rarityName.includes("industrial")) return "#5E98D9"; // Light blue
-    if (rarityName.includes("mil-spec") || rarityName.includes("militar")) return "#4B69CD"; // Blue
-    if (rarityName.includes("restricted") || rarityName.includes("restrito")) return "#8847FF"; // Purple
-    if (rarityName.includes("classified") || rarityName.includes("secreto")) return "#D32CE6"; // Pink
-    if (rarityName.includes("covert") || rarityName.includes("oculto")) return "#EB4B4B"; // Red
-    if (rarityName.includes("extraordinary") || rarityName.includes("extraordinário")) return "#CAAB05"; // Gold
-    if (rarityName.includes("contraband") || rarityName.includes("contrabando")) return "#E4AE39"; // Yellow
+    if (rarityString.includes("consumer") || rarityString.includes("comum")) return "#9EA3B8"; // Gray
+    if (rarityString.includes("industrial") || rarityString.includes("industrial")) return "#5E98D9"; // Light blue
+    if (rarityString.includes("mil-spec") || rarityString.includes("militar")) return "#4B69CD"; // Blue
+    if (rarityString.includes("restricted") || rarityString.includes("restrito")) return "#8847FF"; // Purple
+    if (rarityString.includes("classified") || rarityString.includes("secreto")) return "#D32CE6"; // Pink
+    if (rarityString.includes("covert") || rarityString.includes("oculto")) return "#EB4B4B"; // Red
+    if (rarityString.includes("extraordinary") || rarityString.includes("extraordinário")) return "#CAAB05"; // Gold
+    if (rarityString.includes("contraband") || rarityString.includes("contrabando")) return "#E4AE39"; // Yellow
     
     return "#9EA3B8"; // Default gray
-  };
-
-  // Função para formatar as propriedades da skin para exibição
-  const formatSkinProperty = (prop: any): string => {
-    if (prop === null || prop === undefined) return "Desconhecido";
-    if (typeof prop === 'string') return prop;
-    if (typeof prop === 'object') {
-      if ('name' in prop && prop.name) return prop.name;
-      return JSON.stringify(prop);
-    }
-    return String(prop);
   };
 
   return (
@@ -275,7 +271,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
           )}
           
           {isDropdownOpen && (
-            <div className="absolute z-50 top-full left-0 mt-1 bg-card border border-primary/30 rounded-md shadow-lg overflow-y-auto w-full" style={{
+            <div className="absolute z-[9999] top-full left-0 mt-1 bg-card border border-primary/30 rounded-md shadow-lg overflow-y-auto w-full" style={{
               maxHeight: '300px'
             }}>
               {searchResults.length > 0 ? (
@@ -290,8 +286,8 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
                       style={{ borderColor: getRarityColor(item) }}
                     >
                       <img
-                        src={item.image || '/placeholder.svg'}
-                        alt={item.name || 'Skin'}
+                        src={getSkinImage(item)}
+                        alt={getSkinName(item)}
                         className="w-full h-full object-contain"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = '/placeholder.svg';
@@ -299,7 +295,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{item.name || 'Unnamed Skin'}</div>
+                      <div className="text-sm font-medium truncate">{getSkinName(item)}</div>
                       <div className="text-xs text-muted-foreground truncate">
                         {formatSkinProperty(item.weapon)}
                       </div>
@@ -323,8 +319,8 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
                 style={{ borderColor: getRarityColor(selectedSkin) }}
               >
                 <img
-                  src={selectedSkin.image || '/placeholder.svg'}
-                  alt={selectedSkin.name || 'Skin'}
+                  src={getSkinImage(selectedSkin)}
+                  alt={getSkinName(selectedSkin)}
                   className="w-full h-full object-contain"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/placeholder.svg';
@@ -333,7 +329,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
               </div>
               
               <div className="flex-1">
-                <h3 className="font-medium">{selectedSkin.name || 'Unnamed Skin'}</h3>
+                <h3 className="font-medium">{getSkinName(selectedSkin)}</h3>
                 <p className="text-sm text-muted-foreground">
                   {formatSkinProperty(selectedSkin.weapon)}
                 </p>
@@ -511,7 +507,7 @@ const AddSkinForm = ({ onSkinAdded }: AddSkinFormProps) => {
                             {tradeLockEndDate ? format(tradeLockEndDate, 'dd/MM/yyyy') : <span>Data fim do trade lock</span>}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" style={{ zIndex: 100 }}>
+                        <PopoverContent className="w-auto p-0" style={{ zIndex: 10000 }}>
                           <CalendarComponent
                             mode="single"
                             selected={tradeLockEndDate}
