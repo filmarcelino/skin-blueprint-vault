@@ -1,9 +1,11 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
 // Supabase client setup
-const supabaseUrl = process.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+// In Vite, we only use import.meta.env, not process.env
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Provide default values to prevent the error when environment variables aren't available yet
 const safeSupabaseUrl = supabaseUrl || 'https://your-project-url.supabase.co';
